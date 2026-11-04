@@ -86,12 +86,12 @@ function Aside({ go, density }: { go: (s: Screen) => void; density: Density }) {
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-mute"><Icon.car width={18} height={18} /></span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[0.9rem]">{v.name} · {v.generation}</span>
-          <span className="block truncate text-[0.7rem] text-mute">{v.engine} 1.5 Turbo · {v.stage} · {v.declaredHp} ch déclarés</span>
+          <span className="block truncate text-[0.7rem] text-mute">{v.engine} 1.5 T · {v.stage} · {v.declaredHp} ch décl.</span>
         </span>
       </button>
       <div className="grid grid-cols-2 gap-2">
         <AsideMetric label="Vitesse" metric={m.speed} unit="km/h" onClick={() => go('engine')} />
-        <AsideMetric label="Liquide refr." metric={m.coolantTemp} unit="°C" onClick={() => go('engine')} tone={thresholdState(m.coolantTemp.value, m.coolantTemp.source, limit)} />
+        <AsideMetric label="Liquide" metric={m.coolantTemp} unit="°C" onClick={() => go('engine')} tone={thresholdState(m.coolantTemp.value, m.coolantTemp.source, limit)} />
         <AsideMetric label="Batterie" metric={m.battery} unit="V" digits={1} onClick={() => go('engine')} />
         <AsideMetric label="Turbo" metric={m.boost} unit="bar" digits={2} onClick={() => go('engine')} />
       </div>
@@ -107,8 +107,8 @@ function AsideMetric({ label, metric, unit, digits = 0, onClick, tone }: { label
   const ring = tone === 'over' ? 'border-bad/70' : tone === 'near' ? 'border-warn/60' : '';
   return (
     <button className={`card px-3 py-2 text-left ${ring}`} onClick={onClick}>
-      <span className="flex items-center justify-between gap-1"><span className="label truncate !text-[0.6rem]">{label}</span><SourceBadge source={d.source} /></span>
-      <span className="mt-1 block text-[1.55rem] font-light leading-none tabular-nums">{d.text}<span className="ml-1 text-[0.7rem] text-mute">{unit}</span></span>
+      <span className="flex items-center justify-between gap-1"><span className="label min-w-0 truncate !text-[0.58rem] !tracking-[0.08em]">{label}</span><SourceBadge source={d.source} /></span>
+      <span className="mt-1 block whitespace-nowrap text-[1.5rem] font-light leading-none tabular-nums">{d.text}<span className="ml-1 text-[0.7rem] text-mute">{unit}</span></span>
     </button>
   );
 }

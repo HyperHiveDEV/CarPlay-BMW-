@@ -64,12 +64,26 @@ export function focusEl(el: HTMLElement | null | undefined) {
   return true;
 }
 
+/** Dernier élément focalisé hors fenêtre modale : sert à reprendre après fermeture d'un menu. */
+let lastFocus: HTMLElement | null = null;
+if (typeof document !== 'undefined') {
+  document.addEventListener('focusin', (e) => {
+    const el = e.target as HTMLElement | null;
+    if (el && el !== document.body && !el.closest('[data-nav-modal]')) lastFocus = el;
+  });
+}
+
 /** Applique une action de navigation ; renvoie true si elle a été traitée. */
 export function navigate(action: 'next' | 'prev' | 'up' | 'down' | 'left' | 'right' | 'select', doc: Document = document): boolean {
   const root = activeRoot(doc);
   const zs = zones(root);
   if (!zs.length) return false;
-  const current = doc.activeElement as HTMLElement | null;
+  let current = doc.activeElement as HTMLElement | null;
+  // focus perdu (menu fermé, vue 3D quittée) : on repart du dernier élément connu
+  if ((!current || current === doc.body) && lastFocus?.isConnected && visible(lastFocus) && zs.some((z) => z.contains(lastFocus))) {
+    current = lastFocus;
+    if (action === 'select') return focusEl(current);
+  }
   const zoneOf = (el: HTMLElement | null) => (el ? zs.find((z) => z.contains(el)) ?? null : null);
   let zone = zoneOf(current);
   if (!zone || !current || current === doc.body) {
