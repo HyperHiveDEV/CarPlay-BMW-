@@ -14,6 +14,7 @@ import { useSettings } from './settings/settingsStore';
 import { useScene } from './state/sceneStore';
 import { ConnectionManager } from './vehicle/ConnectionManager';
 import { useMotionState } from './vehicle/drivingSafety';
+import { setAlertThresholds } from './vehicle/VehicleDataRepository';
 
 export type Screen = 'home' | 'vehicle' | 'engine' | 'maintenance' | 'media' | 'settings';
 
@@ -27,9 +28,15 @@ export default function App() {
   const introEnabled = useSettings((s) => s.introEnabled);
   const dataSource = useSettings((s) => s.dataSource);
   const defaultCamera = useSettings((s) => s.defaultCamera);
+  const alertThresholds = useSettings((s) => s.alertThresholds);
+  const acquisition = useSettings((s) => s.acquisition);
   const ortho = new URLSearchParams(location.search).has('ortho');
   const [phase, setPhase] = useState<'logo' | 'reveal' | 'done'>(introEnabled && !ortho ? 'logo' : 'done');
   const motion = useMotionState();
+
+  // seuils d'alerte et fréquence d'acquisition (Engine V2 / Réglages)
+  useEffect(() => setAlertThresholds(alertThresholds), [alertThresholds]);
+  useEffect(() => ConnectionManager.setAcquisitionMode(acquisition), [acquisition]);
 
   useEffect(() => {
     document.documentElement.dataset.accent = accent;

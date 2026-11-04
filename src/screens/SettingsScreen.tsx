@@ -10,6 +10,7 @@ import { Notice, Row, SectionTitle, Segmented, Toggle } from '../components/ui';
 import { Icon } from '../components/Icons';
 import { resolveTier } from '../three/CarScene';
 import type { DemoScenario } from '../vehicle/SimulatedVehicleProvider';
+import type { AcquisitionMode } from '../vehicle/acquisition';
 
 type Section = 'appearance' | '3d' | 'vehicle' | 'data' | 'diag';
 const SECTIONS: { id: Section; label: string }[] = [
@@ -171,6 +172,12 @@ function DataSection() {
           }}
           options={[{ value: 'demo', label: 'Démonstration' }, { value: 'obd', label: 'OBD-II' }]}
         />
+      </Row>
+      <Row
+        label="Fréquence d’acquisition OBD"
+        hint={`Auto : adaptée à la latence et aux erreurs de l’adaptateur (1 à 10 Hz). Mesuré : ${conn.acquisitionHz ? `${conn.acquisitionHz} Hz` : '—'}${conn.latencyMs ? `, ${conn.latencyMs} ms/requête` : ''}${conn.limitedByAdapter ? ' — fréquence demandée supérieure aux capacités de l’adaptateur' : ''}.`}
+      >
+        <Segmented<AcquisitionMode> value={s.acquisition} onChange={(v) => s.set({ acquisition: v })} options={[{ value: 'auto', label: 'Auto' }, { value: '2', label: '2 Hz' }, { value: '5', label: '5 Hz' }, { value: '10', label: '10 Hz' }]} />
       </Row>
       {s.dataSource === 'obd' && (
         <div className="py-4">
