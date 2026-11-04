@@ -1,0 +1,6 @@
+{
+  "appId": "fr.f21digital.cockpit",
+  "appName": "F21 Digital",
+  "webDir": "dist",
+  "android": { "backgroundColor": "#080A0D", "allowMixedContent": false }
+}

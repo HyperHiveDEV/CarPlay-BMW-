@@ -1,0 +1,225 @@
+import { useState } from 'react';
+import { useSettings, TRANSMISSION_LABEL, type Quality, type Transmission } from '../settings/settingsStore';
+import { useVehicleRepo } from '../vehicle/VehicleDataRepository';
+import { ConnectionManager } from '../vehicle/ConnectionManager';
+import type { BtDevice } from '../obd/transport';
+import { isAllowedCommand } from '../obd/readOnlyGuard';
+import { useScene } from '../state/sceneStore';
+import { CAMERA_PRESETS, type CameraPreset } from '../three/cameraPresets';
+import { Notice, Row, SectionTitle, Segmented, Toggle } from '../components/ui';
+import { Icon } from '../components/Icons';
+import { resolveTier } from '../three/CarScene';
+import type { DemoScenario } from '../vehicle/SimulatedVehicleProvider';
+
+type Section = 'appearance' | '3d' | 'vehicle' | 'data' | 'diag';
+const SECTIONS: { id: Section; label: string }[] = [
+  { id: 'appearance', label: 'Interface' },
+  { id: '3d', label: 'Rendu 3D' },
+  { id: 'vehicle', label: 'Véhicule' },
+  { id: 'data', label: 'Source de données' },
+  { id: 'diag', label: 'Diagnostic' },
+];
+
+export function SettingsScreen() {
+  const [sec, setSec] = useState<Section>('appearance');
+  const s = useSettings();
+  return (
+    <div className="absolute inset-0 overflow-y-auto px-8 pb-4 screen-enter">
+      <SectionTitle kicker="Settings" title="Réglages" />
+      <div className="grid grid-cols-[240px_1fr] gap-5">
+        <div className="card self-start p-2">
+          {SECTIONS.map((x) => (
+            <button key={x.id} onClick={() => setSec(x.id)} className={`flex w-full rounded-xl px-3 py-3 text-left text-sm ${sec === x.id ? 'bg-ink/70 ring-1 ring-accent/40' : 'text-mute hover:text-fg'}`}>
+              {x.label}
+            </button>
+          ))}
+          <div className="mt-2 border-t border-line/60 p-2">
+            <button className="btn w-full text-bad" onClick={() => confirm('Réinitialiser toutes les préférences ? (l’historique d’entretien est conservé)') && s.reset()}>
+              <Icon.reset width={16} height={16} /> Réinitialiser
+            </button>
+          </div>
+        </div>
+        <div className="card min-w-0 px-6 py-2">
+          {sec === 'appearance' && (
+            <>
+              <Row label="Couleur d’accent" hint="Le violet rappelle les phares personnalisés.">
+                <Segmented value={s.accent} onChange={(v) => s.set({ accent: v })} options={[{ value: 'violet', label: 'Violet' }, { value: 'blue', label: 'Bleu électrique' }]} />
+              </Row>
+              <Row label="Mode d’affichage" hint="Jour : contraste renforcé pour la lecture au soleil.">
+                <Segmented value={s.theme} onChange={(v) => s.set({ theme: v })} options={[{ value: 'night', label: 'Nuit' }, { value: 'day', label: 'Jour' }]} />
+              </Row>
+              <Row label="Unités" hint="Système métrique (km, km/h, °C, bar).">
+                <span className="text-sm text-mute">Métrique</span>
+              </Row>
+              <Row label="Animation d’accueil" hint="Séquence d’ouverture de ~3,5 s.">
+                <Toggle checked={s.introEnabled} onChange={(v) => s.set({ introEnabled: v })} />
+              </Row>
+            </>
+          )}
+          {sec === '3d' && <ThreeDSection />}
+          {sec === 'vehicle' && <VehicleSection />}
+          {sec === 'data' && <DataSection />}
+          {sec === 'diag' && <DiagSection />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ThreeDSection() {
+  const s = useSettings();
+  return (
+    <>
+      <Row label="Qualité graphique" hint="Auto : adapte la qualité au matériel et baisse si les FPS chutent.">
+        <Segmented<Quality> value={s.quality} onChange={(v) => s.set({ quality: v })} options={[{ value: 'auto', label: 'Auto' }, { value: 'low', label: 'Économie' }, { value: 'medium', label: 'Standard' }, { value: 'high', label: 'Élevée' }]} />
+      </Row>
+      <Row label="Caméra par défaut">
+        <select className="input w-48" value={s.defaultCamera} onChange={(e) => s.set({ defaultCamera: e.target.value as CameraPreset })}>
+          {(Object.keys(CAMERA_PRESETS) as CameraPreset[]).map((c) => <option key={c} value={c}>{CAMERA_PRESETS[c].label}</option>)}
+        </select>
+      </Row>
+      <Row label="Sensibilité de rotation" hint={`${s.rotateSensitivity.toFixed(1)}×`}>
+        <input type="range" min={0.2} max={2} step={0.1} value={s.rotateSensitivity} onChange={(e) => s.set({ rotateSensitivity: Number(e.target.value) })} className="w-56 accent-[rgb(var(--c-accent))]" />
+      </Row>
+      <Row label="Rotation lente automatique" hint="Rotation douce du véhicule à l’accueil.">
+        <Toggle checked={s.autoRotate} onChange={(v) => s.set({ autoRotate: v })} />
+      </Row>
+    </>
+  );
+}
+
+function VehicleSection() {
+  const s = useSettings();
+  const v = s.vehicle;
+  const [km, setKm] = useState(v.mileageKm?.toString() ?? '');
+  return (
+    <>
+      <Row label="Kilométrage" hint="Saisie manuelle : l’OBD générique ne fournit pas le compteur kilométrique de la F21.">
+        <div className="flex gap-2">
+          <input className="input w-36" inputMode="numeric" value={km} placeholder="km" onChange={(e) => setKm(e.target.value.replace(/[^\d]/g, ''))} />
+          <button className="btn btn-accent" onClick={() => s.setVehicle({ mileageKm: km ? Number(km) : null, mileageUpdatedAt: km ? new Date().toISOString() : null })}>Enregistrer</button>
+        </div>
+      </Row>
+      <Row label="Transmission" hint="À confirmer sur le certificat d’immatriculation / la VIN.">
+        <select className="input w-72" value={v.transmission} onChange={(e) => s.setVehicle({ transmission: e.target.value as Transmission })}>
+          {(Object.keys(TRANSMISSION_LABEL) as Transmission[]).map((t) => <option key={t} value={t}>{TRANSMISSION_LABEL[t]}</option>)}
+        </select>
+      </Row>
+      <Row label="Puissance déclarée (ch)" hint={`Préparation ${v.stage} — origine ${v.stockHp} ch`}>
+        <input className="input w-24" inputMode="numeric" value={v.declaredHp} onChange={(e) => s.setVehicle({ declaredHp: Number(e.target.value.replace(/[^\d]/g, '')) || 0 })} />
+      </Row>
+      <Row label="Préparation">
+        <input className="input w-40" value={v.stage} onChange={(e) => s.setVehicle({ stage: e.target.value.slice(0, 20) })} />
+      </Row>
+      <Row label="Texte de plaque (3D)" hint="Plaque neutre : aucune immatriculation réelle n’est affichée.">
+        <input className="input w-48" value={v.plateText} onChange={(e) => s.setVehicle({ plateText: e.target.value.slice(0, 12) })} />
+      </Row>
+      <Row label="Bandeau de pare-brise (3D)">
+        <input className="input w-48" value={v.windshieldBanner} onChange={(e) => s.setVehicle({ windshieldBanner: e.target.value.slice(0, 18).toUpperCase() })} />
+      </Row>
+      <Row label="Identité" hint="BMW Série 1 116i · F21 LCI 2018 · 3 portes · M Sport · B38 1 499 cm³ 3 cylindres turbo essence">
+        <span className="text-sm text-mute">Fixe</span>
+      </Row>
+    </>
+  );
+}
+
+function DataSection() {
+  const s = useSettings();
+  const conn = useVehicleRepo((r) => r.connection);
+  const [devices, setDevices] = useState<BtDevice[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const native = ConnectionManager.transport.nativeAvailable;
+
+  const act = async (fn: () => Promise<unknown>) => {
+    setErr(null);
+    setBusy(true);
+    try {
+      await fn();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Row label="Source des données véhicule" hint="DEMO : simulation complète. OBD-II : adaptateur ELM327 Bluetooth (lecture seule).">
+        <Segmented
+          value={s.dataSource}
+          onChange={(v) => {
+            s.set({ dataSource: v });
+            if (v === 'demo') void ConnectionManager.startDemo();
+            else void ConnectionManager.disconnect();
+          }}
+          options={[{ value: 'demo', label: 'Démonstration' }, { value: 'obd', label: 'OBD-II' }]}
+        />
+      </Row>
+      {s.dataSource === 'obd' && (
+        <div className="py-4">
+          {!native && <Notice tone="warn">Connexion OBD disponible uniquement dans l’APK Android (Bluetooth série SPP). Sur PC, utilisez le mode démonstration.</Notice>}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button className="btn btn-accent" disabled={!native || busy} onClick={() => act(async () => setDevices(await ConnectionManager.scan(true)))}><Icon.bt width={16} height={16} /> Rechercher les adaptateurs</button>
+            {s.lastObdAddress && (
+              <button className="btn" disabled={!native || busy} onClick={() => act(() => ConnectionManager.connectObd({ address: s.lastObdAddress!, name: s.lastObdName ?? undefined }))}>Reconnecter {s.lastObdName ?? s.lastObdAddress}</button>
+            )}
+            {(conn.status === 'connected' || conn.status === 'error') && <button className="btn" onClick={() => act(() => ConnectionManager.disconnect())}>Déconnecter</button>}
+            <span className="text-sm text-mute">État : {conn.status}{conn.message ? ` — ${conn.message}` : ''}</span>
+          </div>
+          {devices && (
+            <div className="mt-3 rounded-xl border border-line">
+              {devices.length === 0 && <div className="p-3 text-sm text-mute">Aucun appareil trouvé. Jumelez l’adaptateur dans les réglages Bluetooth Android (code usuel 1234 ou 0000).</div>}
+              {devices.map((d) => (
+                <button key={d.address} disabled={busy} className="flex w-full items-center justify-between border-b border-line/50 px-4 py-3 text-left text-sm last:border-0 hover:bg-ink/40"
+                  onClick={() => act(async () => { await ConnectionManager.connectObd(d); s.set({ lastObdAddress: d.address, lastObdName: d.name }); })}>
+                  <span>{d.name || 'Appareil sans nom'} <span className="text-xs text-mute">{d.address}</span></span>
+                  <span className="text-xs text-mute">{d.bonded ? 'jumelé' : 'détecté'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {err && <div className="mt-3"><Notice tone="bad">{err}</Notice></div>}
+          {conn.supportedPids.length > 0 && (
+            <div className="mt-4 text-xs text-mute">Protocole : {conn.protocol} · PID Mode 01 supportés : {conn.supportedPids.join(' ')}</div>
+          )}
+          <div className="mt-4"><Notice>Lecture seule : seules les requêtes Mode 01 (données courantes) et la lecture VIN sont autorisées. Écriture, codage, effacement des défauts et commandes d’actionneurs sont bloqués dans le code (JS et Kotlin). Les données propriétaires BMW ne sont pas accessibles via un adaptateur générique.</Notice></div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function DiagSection() {
+  const s = useSettings();
+  const scene = useScene();
+  const repo = useVehicleRepo();
+  const [scenario, setScenario] = useState<DemoScenario>(ConnectionManager.simulator.scenario);
+  const [cmd, setCmd] = useState('010C');
+  return (
+    <>
+      <Row label="Mode diagnostic" hint="Affiche FPS et état du rendu dans la barre supérieure.">
+        <Toggle checked={s.diagnostics} onChange={(v) => s.set({ diagnostics: v })} />
+      </Row>
+      <Row label="Scénario de démonstration" hint="« Roulage » permet de tester le verrouillage de l’interface en mouvement.">
+        <Segmented<DemoScenario> value={scenario} disabled={s.dataSource !== 'demo'} onChange={(v) => { setScenario(v); ConnectionManager.setDemoScenario(v); }} options={[{ value: 'parked', label: 'Moteur arrêté' }, { value: 'idle', label: 'Ralenti' }, { value: 'driving', label: 'Roulage' }]} />
+      </Row>
+      <Row label="Rendu" hint={`Niveau effectif : ${resolveTier(s.quality, 0)} · ${scene.fps} FPS · WebGL ${document.createElement('canvas').getContext('webgl2') ? '2' : '1'}`}>
+        <span className="text-sm text-mute">{scene.modelStatus}</span>
+      </Row>
+      <Row label="Modèle 3D" hint={scene.modelMessage}>
+        <span className="text-sm text-mute">{scene.modelStatus === 'glb' ? 'GLB' : 'Maquette provisoire'}</span>
+      </Row>
+      <Row label="Données" hint={`Dernière mise à jour : ${repo.snapshot.updatedAt ? new Date(repo.snapshot.updatedAt).toLocaleTimeString('fr-FR') : '—'} · valeurs rejetées par le validateur : ${repo.rejected}`}>
+        <span className="text-sm text-mute">{repo.connection.status}</span>
+      </Row>
+      <Row label="Test de la garde lecture seule" hint="Vérifie si une commande serait transmise à l’adaptateur.">
+        <div className="flex items-center gap-2">
+          <input className="input w-32 font-mono" value={cmd} onChange={(e) => setCmd(e.target.value)} />
+          <span className={`text-sm ${isAllowedCommand(cmd) ? 'text-ok' : 'text-bad'}`}>{isAllowedCommand(cmd) ? 'Autorisée' : 'Bloquée'}</span>
+        </div>
+      </Row>
+    </>
+  );
+}
