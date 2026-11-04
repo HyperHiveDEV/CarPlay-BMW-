@@ -109,7 +109,7 @@ d'actionneurs sont refusés par une liste blanche (JS **et** Kotlin). Les donné
 BMW (ouvrants, kilométrage, CBS) ne sont pas accessibles avec un adaptateur générique.
 
 ## Rendu 3D
-**Modèle définitif** : évaluation des sources proposées et marche à suivre dans [docs/MODELE_DEFINITIF.md](docs/MODELE_DEFINITIF.md).
+**Modèle définitif** : cahier des charges [docs/CAHIER_DES_CHARGES_MODELE_3D.md](docs/CAHIER_DES_CHARGES_MODELE_3D.md), évaluation des sources proposées et marche à suivre dans [docs/MODELE_DEFINITIF.md](docs/MODELE_DEFINITIF.md).
 Modèles disponibles (Réglages › Rendu 3D › Modèle 3D, ou `?model=` dans l'URL) : **Auto** (modèle sous licence
 `bmw_f21_lci.glb` s'il est présent, sinon RealisticF21), **GLB maquette** (fichier fourni, candidat —
 rapport : [docs/GLB_MAQUETTE_RAPPORT.md](docs/GLB_MAQUETTE_RAPPORT.md)), **RealisticF21** (défaut effectif), **Ancien** (secours).
