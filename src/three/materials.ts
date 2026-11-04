@@ -12,13 +12,13 @@ export function createMaterials(tier: RenderTier) {
     ? new THREE.MeshPhysicalMaterial({ color: '#050608', roughness: 0.18, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04 })
     : new THREE.MeshStandardMaterial({ color: '#060708', roughness: 0.2, metalness: 0.2 });
   const glass = physical
-    ? new THREE.MeshPhysicalMaterial({ color: '#06080B', roughness: 0.04, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6 })
-    : new THREE.MeshStandardMaterial({ color: '#07090c', roughness: 0.05, metalness: 0.6 });
+    ? new THREE.MeshPhysicalMaterial({ color: '#06080B', roughness: 0.04, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6, transparent: true, opacity: 0.86 })
+    : new THREE.MeshStandardMaterial({ color: '#07090c', roughness: 0.05, metalness: 0.6, transparent: true, opacity: 0.88 });
   const trim = new THREE.MeshStandardMaterial({ color: '#0B0D10', roughness: 0.6, metalness: 0.1 });
   const plasticMesh = new THREE.MeshStandardMaterial({ color: '#0d0f12', roughness: 0.85, metalness: 0 });
   const cavity = new THREE.MeshStandardMaterial({ color: '#0c0e12', roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
   const interior = new THREE.MeshStandardMaterial({ color: '#1a1c20', roughness: 0.8 });
-  const rim = new THREE.MeshStandardMaterial({ color: '#6b7079', roughness: 0.34, metalness: 0.65, envMapIntensity: 1.4 });
+  const rim = new THREE.MeshStandardMaterial({ color: '#80858d', roughness: 0.36, metalness: 0.6, envMapIntensity: 1.4 });
   const rimDark = new THREE.MeshStandardMaterial({ color: '#2b2e33', roughness: 0.45, metalness: 0.85 });
   const tyre = new THREE.MeshStandardMaterial({ color: '#141516', roughness: 0.92, metalness: 0 });
   const disc = new THREE.MeshStandardMaterial({ color: '#6f7175', roughness: 0.45, metalness: 0.9 });

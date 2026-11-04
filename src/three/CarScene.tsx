@@ -6,7 +6,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useScene } from '../state/sceneStore';
 import { useSettings } from '../settings/settingsStore';
 import { createMaterials, type RenderTier } from './materials';
-import { ProceduralF21 } from './ProceduralF21';
+import { RealisticF21 } from './RealisticF21';
 import { GlbCar } from './GlbCar';
 import { CAMERA_PRESETS } from './cameraPresets';
 import { DEFAULT_MANIFEST, type ModelManifest } from './modelManifest';
@@ -195,7 +195,7 @@ class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode
   }
 }
 
-/** Détecte la présence du modèle GLB définitif ; à défaut, la maquette provisoire est utilisée. */
+/** Détecte la présence du modèle GLB définitif ; à défaut, la reconstitution d'après photo est utilisée. */
 function useModelManifest() {
   const [manifest, setManifest] = useState<ModelManifest | null | undefined>(undefined);
   useEffect(() => {
@@ -243,12 +243,12 @@ export function CarScene({ visible, interactive, shift, introActive, onIntroDone
     return () => document.removeEventListener('visibilitychange', h);
   }, []);
   useEffect(() => {
-    if (manifest === null) useScene.getState().set({ modelStatus: 'procedural', modelMessage: 'Maquette provisoire (aucun GLB fourni)' });
+    if (manifest === null) useScene.getState().set({ modelStatus: 'procedural', modelMessage: 'Reconstitution d’après la photo de profil (aucun GLB fourni)' });
   }, [manifest]);
 
   const dpr: [number, number] = tier === 'high' ? [1, 2] : tier === 'medium' ? [1, 1.5] : [0.75, 1];
   const procedural = (
-    <ProceduralF21 mats={mats} tier={tier} interactive={interactive} plateText={vehicle.plateText} bannerText={vehicle.windshieldBanner} />
+    <RealisticF21 mats={mats} tier={tier} interactive={interactive} plateText={vehicle.plateText} bannerText={vehicle.windshieldBanner} />
   );
 
   return (

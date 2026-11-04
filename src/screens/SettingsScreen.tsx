@@ -209,7 +209,7 @@ function DiagSection() {
         <span className="text-sm text-mute">{scene.modelStatus}</span>
       </Row>
       <Row label="Modèle 3D" hint={scene.modelMessage}>
-        <span className="text-sm text-mute">{scene.modelStatus === 'glb' ? 'GLB' : 'Maquette provisoire'}</span>
+        <span className="text-sm text-mute">{scene.modelStatus === 'glb' ? 'GLB' : 'Reconstitution d’après photo'}</span>
       </Row>
       <Row label="Données" hint={`Dernière mise à jour : ${repo.snapshot.updatedAt ? new Date(repo.snapshot.updatedAt).toLocaleTimeString('fr-FR') : '—'} · valeurs rejetées par le validateur : ${repo.rejected}`}>
         <span className="text-sm text-mute">{repo.connection.status}</span>

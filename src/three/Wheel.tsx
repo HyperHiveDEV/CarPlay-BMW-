@@ -2,11 +2,11 @@ import { forwardRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { CarMaterials } from './materials';
-import { F21 } from './f21Geometry';
+import { WHEELS } from './f21Blueprint';
 
 /** Géométries partagées par les 4 roues (créées une seule fois). */
 function buildWheelGeometries(detail: number) {
-  const R = F21.wheelRadius; // rayon extérieur pneu
+  const R = WHEELS.radius; // rayon extérieur pneu
   const rimR = 0.229; // jante 18" (457 mm)
   const W = 0.225; // largeur pneu 225
   // Pneu : profil (section) révolutionné autour de l'axe

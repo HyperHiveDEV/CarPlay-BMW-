@@ -5,9 +5,11 @@ B38 Stage 1 (170 ch déclarés)** : visualisation 3D interactive, éclairage sim
 en lecture seule, carnet d'entretien hors ligne, multimédia et réglages. Fonctionne intégralement
 en **mode démonstration** sur PC, sans véhicule.
 
-> **État actuel** — la voiture 3D est une **maquette provisoire** générée par code au gabarit F21,
-> clairement étiquetée dans l'interface. Le modèle définitif se dépose en GLB (voir
-> [docs/IMPORT_MODELE_3D.md](docs/IMPORT_MODELE_3D.md)). **Aucun APK n'a été compilé** dans
+> **État actuel** — la voiture 3D est une **reconstitution générée par code d'après la photo de
+> profil du véhicule** (silhouette, vitrages, portières, ligne de caractère, feux relevés sur la
+> photo et mis à l'échelle sur l'empattement réel). Elle est fidèle en proportions mais reste une
+> approximation : pour un rendu « catalogue », déposer un modèle GLB F21 LCI sous licence
+> (voir [docs/IMPORT_MODELE_3D.md](docs/IMPORT_MODELE_3D.md)). **Aucun APK n'a été compilé** dans
 > l'environnement de développement (dépôts Google bloqués) : voir « Générer l'APK ».
 
 ## Lancer sur PC
@@ -51,7 +53,8 @@ Tester : Paramètres › Diagnostic › Scénario « Roulage ».
 src/
   components/   UI réutilisable (jauges, graphiques, badges, barre de navigation)
   screens/      écrans (présentation uniquement)
-  three/        rendu 3D : scène, matériaux PBR, maquette F21, chargeur GLB, caméras
+  three/        rendu 3D : scène, matériaux PBR, gabarit relevé (f21Blueprint), carrosserie lissée
+                (f21Body), matériau par zones (zoneMaterial), chargeur GLB, caméras
   animations/   amortissements, animateur d'ouvrants, rythme des clignotants
   vehicle/      types, VehicleDataRepository, ConnectionManager, VehicleDataValidator,
                 SimulatedVehicleProvider (données DEMO), sécurité conduite

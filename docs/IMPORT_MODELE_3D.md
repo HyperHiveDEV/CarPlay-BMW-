@@ -1,9 +1,17 @@
 # Importer un modèle 3D BMW F21 LCI
 
-La voiture affichée aujourd'hui est une **maquette provisoire** construite par code
-(`src/three/ProceduralF21.tsx`) au gabarit de la F21 (longueur 4 329 mm, largeur 1 765 mm,
-empattement 2 690 mm). Elle n'est pas une reconstruction exacte : l'application l'indique
-par l'étiquette « MAQUETTE 3D PROVISOIRE ». Pour un rendu fidèle, il faut un vrai modèle.
+La voiture affichée aujourd'hui est une **reconstitution générée par code** :
+
+- `src/three/f21Blueprint.ts` : lignes relevées sur la photo de profil du véhicule (toit, capot,
+  bas de caisse, ceinture de caisse, ligne de caractère, vitrages, portière, feux), converties en
+  mètres via l'empattement (2 690 mm) et la longueur (4 324 mm) réels ;
+- `src/three/f21Body.ts` : surface lissée par sections transversales (« lofting »), passages de roue,
+  découpe des ouvrants (portières, capot, hayon) en pièces articulées ;
+- `src/three/zoneMaterial.ts` : zones (vitres, noir brillant, haricots, prises d'air, optiques, feux,
+  joints) calculées par pixel pour des contours nets.
+
+Pour corriger la forme, modifier les points du gabarit (coordonnées en pixels de la photo).
+Pour un rendu photoréaliste (surfaces exactes, optiques détaillées, intérieur), il faut un vrai modèle.
 
 ## 1. Se procurer un modèle
 

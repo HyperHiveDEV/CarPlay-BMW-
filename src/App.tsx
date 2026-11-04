@@ -117,7 +117,7 @@ function ModelTag() {
   return (
     <div className="pointer-events-none absolute bottom-2 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 text-center">
       {status !== 'glb' && (
-        <span className="rounded-md border border-warn/40 bg-ink/60 px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-warn">MAQUETTE 3D PROVISOIRE · MODÈLE F21 LCI À IMPORTER</span>
+        <span className="rounded-md border border-line bg-ink/60 px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-mute">RECONSTITUTION 3D D’APRÈS VOS PHOTOS</span>
       )}
       {hovered && <span className="text-xs text-mute">Toucher pour animer · {hovered === 'hood' ? 'capot' : hovered === 'tailgate' ? 'hayon' : 'portière'}</span>}
     </div>
