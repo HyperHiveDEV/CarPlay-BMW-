@@ -1,0 +1,37 @@
+{
+  "_comment": "Exemple de correspondance pour prepare_f21_model.py. Les motifs sont des expressions régulières sur les noms d'objets/matériaux du modèle source : à adapter après ouverture du modèle dans Blender (Outliner). Charnières en mètres, repère Blender après mise à l'échelle (X avant, Y gauche, Z haut), ou null pour déduction automatique.",
+  "target_length_m": 4.324,
+  "rotate_deg": [0, 0, 0],
+  "triangle_budget": 300000,
+  "delete": ["^Camera", "^Light", "ground", "shadow_plane", "license_plate_text"],
+  "openings": {
+    "driverDoor": { "patterns": ["door.*(fl|_l\\b|left|_lf)", "porte.*g"], "hinge": null },
+    "passengerDoor": { "patterns": ["door.*(fr|_r\\b|right|_rf)", "porte.*d"], "hinge": null },
+    "hood": { "patterns": ["hood", "bonnet", "capot"], "hinge": null },
+    "tailgate": { "patterns": ["trunk", "boot", "tailgate", "hatch", "hayon"], "hinge": null }
+  },
+  "wheels": {
+    "fl": { "patterns": ["wheel.*fl", "(tire|tyre|rim|disc|brake).*fl"] },
+    "fr": { "patterns": ["wheel.*fr", "(tire|tyre|rim|disc|brake).*fr"] },
+    "rl": { "patterns": ["wheel.*rl", "(tire|tyre|rim|disc|brake).*rl"] },
+    "rr": { "patterns": ["wheel.*rr", "(tire|tyre|rim|disc|brake).*rr"] }
+  },
+  "materials": {
+    "Paint": ["paint", "carpaint", "body_color", "lack"],
+    "Glass": ["glass", "window", "windshield"],
+    "BlackGloss": ["black_gloss", "piano", "mirror_cap", "kidney", "grille_frame", "spoiler", "diffuser"],
+    "Rim": ["rim", "alloy", "wheel_paint"],
+    "Tyre": ["tire", "tyre", "rubber"],
+    "Chrome": ["chrome", "exhaust"],
+    "Trim": ["plastic", "trim", "black_matte", "seal"]
+  },
+  "lights": {
+    "light_head": ["headlight.*(drl|led|angel)", "drl"],
+    "light_tail": ["taillight", "tail_light", "rear_light"],
+    "light_brake": ["brake_light", "stop"],
+    "blinker_fl": ["indicator.*fl", "blinker.*fl"],
+    "blinker_fr": ["indicator.*fr", "blinker.*fr"],
+    "blinker_rl": ["indicator.*rl", "blinker.*rl"],
+    "blinker_rr": ["indicator.*rr", "blinker.*rr"]
+  }
+}

@@ -6,6 +6,12 @@ export type Quality = 'auto' | 'low' | 'medium' | 'high';
 export type Accent = 'blue' | 'violet';
 export type ThemeMode = 'night' | 'day';
 export type DataSourcePref = 'demo' | 'obd';
+/**
+ * auto : modèle sous licence public/models/bmw_f21_lci.glb s'il existe, sinon RealisticF21 ;
+ * custom : GLB personnalisé BMW_116i_F21_2018_maquette_3D.glb (candidat) ;
+ * realistic : reconstitution procédurale d'après photos ; legacy : ancien modèle de secours.
+ */
+export type ModelChoice = 'auto' | 'custom' | 'realistic' | 'legacy';
 export type Transmission = 'unknown' | 'manual6' | 'auto8';
 
 export interface VehicleSpec {
@@ -38,6 +44,8 @@ export interface Settings {
   lastObdAddress: string | null;
   lastObdName: string | null;
   diagnostics: boolean;
+  /** Modèle 3D affiché (voir docs/GLB_MAQUETTE_RAPPORT.md) */
+  modelSource: ModelChoice;
   vehicle: VehicleSpec;
 }
 
@@ -70,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lastObdAddress: null,
   lastObdName: null,
   diagnostics: false,
+  modelSource: 'auto',
   vehicle: DEFAULT_VEHICLE,
 };
 
@@ -92,7 +101,8 @@ export const useSettings = create<SettingsStore>()(
       storage: createJSONStorage(() => localStorage),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Settings>;
-        return { ...current, ...p, vehicle: { ...DEFAULT_VEHICLE, ...(p.vehicle ?? {}) } };
+        const modelSource = (['auto', 'custom', 'realistic', 'legacy'] as string[]).includes(p.modelSource as string) ? p.modelSource : 'auto';
+        return { ...current, ...p, modelSource, vehicle: { ...DEFAULT_VEHICLE, ...(p.vehicle ?? {}) } } as typeof current;
       },
     },
   ),

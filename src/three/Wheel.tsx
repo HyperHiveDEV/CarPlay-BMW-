@@ -30,22 +30,30 @@ function buildWheelGeometries(detail: number) {
 
   // Branches : 5 paires (design 5 doubles branches), légèrement concaves
   const spokeShape = new THREE.Shape();
-  spokeShape.moveTo(0.055, -0.016);
-  spokeShape.lineTo(rimR - 0.012, -0.011);
-  spokeShape.lineTo(rimR - 0.012, 0.011);
-  spokeShape.lineTo(0.055, 0.016);
+  spokeShape.moveTo(0.06, -0.019);
+  spokeShape.quadraticCurveTo(0.13, -0.015, rimR - 0.014, -0.017);
+  spokeShape.lineTo(rimR - 0.006, -0.02);
+  spokeShape.lineTo(rimR - 0.006, 0.02);
+  spokeShape.lineTo(rimR - 0.014, 0.017);
+  spokeShape.quadraticCurveTo(0.13, 0.015, 0.06, 0.019);
   spokeShape.closePath();
-  const one = new THREE.ExtrudeGeometry(spokeShape, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.004, bevelSegments: 2 });
+  const one = new THREE.ExtrudeGeometry(spokeShape, { depth: 0.026, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.006, bevelSegments: 3, curveSegments: 8 });
   one.translate(0, 0, -0.015);
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 5; i++) {
-    for (const off of [-0.15, 0.15]) {
+    for (const off of [-0.105, 0.105]) {
       const g = one.clone();
       // concavité : la branche recule vers l'extérieur
       const p = g.attributes.position as THREE.BufferAttribute;
       for (let k = 0; k < p.count; k++) {
         const r = p.getX(k);
-        p.setZ(k, p.getZ(k) + (r - 0.055) * 0.2);
+        p.setZ(k, p.getZ(k) + (r - 0.06) * 0.28);
+        // pincement en V vers le moyeu
+        const ang = Math.atan2(p.getY(k), p.getX(k));
+        const rr = Math.hypot(p.getX(k), p.getY(k));
+        const pinch = (off > 0 ? -1 : 1) * 0.11 * (1 - Math.min(1, (rr - 0.06) / 0.16));
+        p.setX(k, Math.cos(ang + pinch) * rr);
+        p.setY(k, Math.sin(ang + pinch) * rr);
       }
       g.rotateZ(((i * 2 * Math.PI) / 5) + off);
       parts.push(g);
@@ -53,7 +61,7 @@ function buildWheelGeometries(detail: number) {
   }
   const spokes = mergeGeometries(parts)!;
   spokes.computeVertexNormals();
-  const hub = new THREE.CylinderGeometry(0.068, 0.072, 0.05, 32);
+  const hub = new THREE.CylinderGeometry(0.072, 0.078, 0.05, 40);
   hub.rotateX(Math.PI / 2);
   const cap = new THREE.CylinderGeometry(0.03, 0.03, 0.012, 32);
   cap.rotateX(Math.PI / 2);

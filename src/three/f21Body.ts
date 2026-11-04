@@ -115,26 +115,34 @@ export const ZONE = {
 } as const;
 export const PART = { body: 0, doorL: 1, doorR: 2, hood: 3, tailgate: 4 } as const;
 
+/** Projecteur LCI vu de face (|z|, y) — relevé sur la photo de nuit : pointe intérieure basse vers les haricots. */
 export const HEAD_FRONT: [number, number][] = [
-  [0.3, 0.655], [0.36, 0.615], [0.55, 0.594], [0.72, 0.584], [0.8, 0.6], [0.83, 0.7], [0.7, 0.716], [0.5, 0.703], [0.34, 0.68],
+  [0.305, 0.622], [0.36, 0.592], [0.47, 0.578], [0.6, 0.575], [0.72, 0.585], [0.8, 0.615], [0.845, 0.66], [0.85, 0.725],
+  [0.72, 0.736], [0.56, 0.718], [0.42, 0.69],
 ];
+/** Haricots (vue de face) : grands, au ras du capot. */
+export const KIDNEY = { cz: 0.158, cy: 0.616, hz: 0.128, hy: 0.079, r: 0.058 };
+/** Bord avant du capot : au-dessus des haricots puis le long du haut des projecteurs. */
+export const HOOD_FRONT = { y0: 0.702, az0: 0.3, slope: 0.085 };
 export const SIDE_INTAKE: [number, number][] = [[0.47, 0.265], [0.76, 0.3], [0.79, 0.47], [0.6, 0.475], [0.49, 0.43]];
 
 const xCowl = HINGES.hood.x + 0.02;
 const xRoofRear = HINGES.tailgate.x;
-export const ZONE_LIMITS = { roofFront: 0.19, cowl: xCowl, roofRear: xRoofRear, hatchBottom: -2.1, doorBottom: pxY(570) };
+export const ZONE_LIMITS = { roofFront: 0.19, cowl: xCowl, roofRear: xRoofRear, hatchBottom: -2.1, doorBottom: pxY(570), tailgateHalf: 0.58, tailgateBottom: 0.66, hoodSide: 0.86 };
+/** Bord avant du capot (vue de face) : au-dessus des haricots puis des projecteurs. */
+export const hoodFrontY = (az: number) => (az < HOOD_FRONT.az0 ? HOOD_FRONT.y0 : HOOD_FRONT.y0 + (az - HOOD_FRONT.az0) * HOOD_FRONT.slope);
 
 /**
  * Pièce d'un point de surface (caisse ou ouvrant). La même règle est évaluée par pixel dans
  * zoneMaterial.ts : un triangle à cheval sur une frontière appartient aux deux pièces et le
  * shader élimine les pixels de l'autre pièce — les bords d'ouvrants sont ainsi nets.
  */
-function classifyPart(x: number, y: number, z: number, nx: number, ny: number, nz: number): number {
+function classifyPart(x: number, y: number, z: number, nz: number): number {
   const az = Math.abs(z);
   const sideFacing = Math.abs(nz) > 0.45;
   if (sideFacing && inPoly(DOOR, x, y) && y > pxY(570)) return z < 0 ? PART.doorL : PART.doorR;
-  if (x > xCowl && (ny > 0.42 || (nx > 0.25 && y > 0.69)) && az < halfWidth(x) * 0.87 && y > 0.66) return PART.hood;
-  if (x < xRoofRear && az < 0.6 && y > 0.66 && !sideFacing && (nx < -0.25 || ny > 0.3)) return PART.tailgate;
+  if (x > xCowl && az < halfWidth(x) * ZONE_LIMITS.hoodSide && y > hoodFrontY(az)) return PART.hood;
+  if (x < xRoofRear && az < ZONE_LIMITS.tailgateHalf && y > ZONE_LIMITS.tailgateBottom) return PART.tailgate;
   return PART.body;
 }
 
@@ -217,7 +225,7 @@ export function buildF21Body(detail: 0 | 1 | 2): F21BodyGeometry {
   const T = idx.length / 3;
   const vPart = new Uint8Array(S * N);
   for (let v = 0; v < S * N; v++) {
-    vPart[v] = classifyPart(pos[3 * v], pos[3 * v + 1], pos[3 * v + 2], nrm[3 * v], nrm[3 * v + 1], nrm[3 * v + 2]);
+    vPart[v] = classifyPart(pos[3 * v], pos[3 * v + 1], pos[3 * v + 2], nrm[3 * v + 2]);
   }
   const triMask = new Uint8Array(T);
   for (let t = 0; t < T; t++) for (let k = 0; k < 3; k++) triMask[t] |= 1 << vPart[idx[3 * t + k]];
@@ -256,35 +264,22 @@ export function buildF21Body(detail: 0 | 1 | 2): F21BodyGeometry {
     outer.setIndex(I);
     if (partId === PART.body) return { outer, inner: null, pivot };
 
-    // panneau intérieur (doublure) + chant fermant l'épaisseur
-    const thick = partId === PART.doorL || partId === PART.doorR ? 0.06 : 0.035;
+    // doublure intérieure décalée vers l'intérieur ; aOuter = position extérieure correspondante,
+    // utilisée par le shader pour découper la doublure exactement comme la pièce.
+    const thick = partId === PART.doorL || partId === PART.doorR ? 0.055 : 0.03;
     const nV = P.length / 3;
-    const IP: number[] = [...P];
+    const IP = P.slice();
     for (let v = 0; v < nV; v++) {
       IP[3 * v] -= Nn[3 * v] * thick;
       IP[3 * v + 1] -= Nn[3 * v + 1] * thick;
       IP[3 * v + 2] -= Nn[3 * v + 2] * thick;
     }
-    const allP = [...P, ...IP];
     const II: number[] = [];
-    for (let k = 0; k < I.length; k += 3) II.push(I[k] + nV, I[k + 2] + nV, I[k + 1] + nV);
-    // arêtes de contour
-    const edges = new Map<string, [number, number, number]>();
-    for (let k = 0; k < I.length; k += 3)
-      for (let e = 0; e < 3; e++) {
-        const u = I[k + e];
-        const v = I[k + ((e + 1) % 3)];
-        const key2 = u < v ? `${u}_${v}` : `${v}_${u}`;
-        const ex = edges.get(key2);
-        if (ex) ex[2]++;
-        else edges.set(key2, [u, v, 1]);
-      }
-    edges.forEach(([u, v, count]) => {
-      if (count !== 1) return;
-      II.push(u, v, v + nV, u, v + nV, u + nV);
-    });
+    for (let k = 0; k < I.length; k += 3) II.push(I[k], I[k + 2], I[k + 1]);
     const inner = new THREE.BufferGeometry();
-    inner.setAttribute('position', new THREE.Float32BufferAttribute(allP, 3));
+    inner.setAttribute('position', new THREE.Float32BufferAttribute(IP, 3));
+    inner.setAttribute('aOuter', new THREE.Float32BufferAttribute(P, 3));
+    inner.setAttribute('aOuterN', new THREE.Float32BufferAttribute(Nn, 3));
     inner.setIndex(II);
     inner.computeVertexNormals();
     return { outer, inner, pivot };

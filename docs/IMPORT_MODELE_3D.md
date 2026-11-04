@@ -64,6 +64,9 @@ remorquage rouge côté droit, plaques neutres.
 
 ## 4. Intégrer
 
+Réglages › Rendu 3D › Modèle 3D = « Auto (GLB si présent) » (défaut). « Reconstitution » force la version
+procédurale, qui reste aussi le repli automatique si le GLB est absent ou illisible.
+
 ```bash
 cp bmw_f21_lci.glb public/models/
 npm run dev        # test sur PC

@@ -23,6 +23,8 @@ interface SceneState {
   modelStatus: ModelStatus;
   modelMessage?: string;
   introDone: boolean;
+  /** faux si le modèle affiché n'a pas d'ouvrants séparés (GLB maquette) */
+  openingsSupported: boolean;
   fps: number;
   dprScale: number;
   toggle: (k: OpeningKey) => void;
@@ -43,6 +45,7 @@ export const useScene = create<SceneState>((set) => ({
   hovered: null,
   modelStatus: 'loading',
   introDone: false,
+  openingsSupported: true,
   fps: 0,
   dprScale: 1,
   toggle: (k) => set((s) => ({ openings: { ...s.openings, [k]: !s.openings[k] } })),

@@ -1,18 +1,30 @@
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, Environment, Lightformer, MeshReflectorMaterial, OrbitControls, PerformanceMonitor } from '@react-three/drei';
+import { ContactShadows, Environment, Lightformer, MeshReflectorMaterial, OrbitControls, OrthographicCamera, PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useScene } from '../state/sceneStore';
 import { useSettings } from '../settings/settingsStore';
 import { createMaterials, type RenderTier } from './materials';
 import { RealisticF21 } from './RealisticF21';
+import { ProceduralF21 } from './ProceduralF21';
+import { BMWF21GLB } from './BMWF21GLB';
+import type { ModelChoice } from '../settings/settingsStore';
 import { GlbCar } from './GlbCar';
 import { CAMERA_PRESETS } from './cameraPresets';
 import { DEFAULT_MANIFEST, type ModelManifest } from './modelManifest';
 import { smoothstep } from '../animations/easing';
 
 export const INTRO_DURATION = 3.6;
+
+/**
+ * Outil de calage : `?ortho=side|front|rear|top` affiche une vue orthographique (1 m = 300 px)
+ * pour superposer le rendu aux photographies de référence (voir docs/IMPORT_MODELE_3D.md).
+ */
+const ORTHO = new URLSearchParams(location.search).get('ortho');
+const ORTHO_POS: Record<string, [number, number, number]> = {
+  side: [0, 0.7, -10], right: [0, 0.7, 10], front: [10, 0.7, 0], rear: [-10, 0.7, 0], top: [0, 10, 0.0001],
+};
 
 /** Choix du niveau de rendu : réglage utilisateur, ou heuristique matérielle en mode auto. */
 export function resolveTier(q: string, degraded: number): RenderTier {
@@ -147,6 +159,13 @@ function Studio({ tier, env }: { tier: RenderTier; env: { intensity: number } })
       <Environment resolution={tier === 'high' ? 512 : tier === 'medium' ? 256 : 128} frames={1}>
         <color attach="background" args={['#050608']} />
         <Lightformer form="rect" intensity={2.4} position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[10, 3, 1]} />
+        {/* lattes de plafond : reflets nets sur capot et pavillon */}
+        {[-2.4, -1.2, 1.2, 2.4].map((z) => (
+          <Lightformer key={z} form="rect" intensity={1.4} position={[0, 5, z]} rotation-x={Math.PI / 2} scale={[9, 0.25, 1]} />
+        ))}
+        {/* bandes latérales fines : ligne de reflet le long des flancs */}
+        <Lightformer form="rect" intensity={3} position={[0, 1.1, -7]} scale={[16, 0.12, 1]} />
+        <Lightformer form="rect" intensity={3} position={[0, 1.1, 7]} rotation-y={Math.PI} scale={[16, 0.12, 1]} />
         <Lightformer form="rect" intensity={1.6} position={[0, 3, -8]} scale={[14, 1.2, 1]} />
         <Lightformer form="rect" intensity={1.6} position={[0, 3, 8]} rotation-y={Math.PI} scale={[14, 1.2, 1]} />
         <Lightformer form="rect" intensity={1.0} position={[9, 2, 0]} rotation-y={-Math.PI / 2} scale={[6, 2, 1]} />
@@ -182,13 +201,14 @@ function Studio({ tier, env }: { tier: RenderTier; env: { intensity: number } })
   );
 }
 
+/** Repli automatique : si un GLB ne peut pas être chargé, le modèle de secours est affiché. */
 class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
   componentDidCatch(e: Error) {
-    useScene.getState().set({ modelStatus: 'error', modelMessage: `GLB illisible : ${e.message}` });
+    useScene.getState().set({ modelStatus: 'error', modelMessage: `GLB non chargé (${e.message}) — repli sur la reconstitution RealisticF21`, openingsSupported: true });
   }
   render() {
     return this.state.failed ? this.props.fallback : this.props.children;
@@ -234,7 +254,11 @@ export function CarScene({ visible, interactive, shift, introActive, onIntroDone
   const tier = resolveTier(quality, degraded);
   const mats = useMemo(() => createMaterials(tier), [tier]);
   const env = useMemo(() => ({ intensity: introActive ? 0.04 : 1 }), []); // eslint-disable-line react-hooks/exhaustive-deps
-  const manifest = useModelManifest();
+  const modelSource = useSettings((s) => s.modelSource);
+  // ?model=custom|realistic|legacy|auto : forcer un modèle (comparaisons, captures)
+  const choice = ((new URLSearchParams(location.search).get('model') as ModelChoice | null) ?? modelSource) as ModelChoice;
+  const detected = useModelManifest();
+  const manifest = choice === 'auto' ? detected : null;
   const [pageHidden, setPageHidden] = useState(document.hidden);
 
   useEffect(() => {
@@ -243,8 +267,10 @@ export function CarScene({ visible, interactive, shift, introActive, onIntroDone
     return () => document.removeEventListener('visibilitychange', h);
   }, []);
   useEffect(() => {
-    if (manifest === null) useScene.getState().set({ modelStatus: 'procedural', modelMessage: 'Reconstitution d’après la photo de profil (aucun GLB fourni)' });
-  }, [manifest]);
+    if (choice === 'legacy') useScene.getState().set({ modelStatus: 'procedural', modelMessage: 'Ancien modèle de secours (ProceduralF21)', openingsSupported: true });
+    else if (choice === 'realistic' || (choice === 'auto' && manifest === null))
+      useScene.getState().set({ modelStatus: 'procedural', modelMessage: 'Reconstitution RealisticF21 d’après les photos', openingsSupported: true });
+  }, [manifest, choice]);
 
   const dpr: [number, number] = tier === 'high' ? [1, 2] : tier === 'medium' ? [1, 1.5] : [0.75, 1];
   const procedural = (
@@ -267,17 +293,27 @@ export function CarScene({ visible, interactive, shift, introActive, onIntroDone
         <PerformanceMonitor onDecline={() => quality === 'auto' && setDegraded((d) => Math.min(2, d + 1))} flipflops={2} />
         <Studio tier={tier} env={env} />
         <Suspense fallback={null}>
-          {manifest ? (
-            <ModelBoundary fallback={procedural}>
+          {choice === 'legacy' ? (
+            <ProceduralF21 mats={mats} tier={tier} interactive={interactive} plateText={vehicle.plateText} bannerText={vehicle.windshieldBanner} />
+          ) : choice === 'custom' ? (
+            <ModelBoundary key="custom" fallback={procedural}>
+              <BMWF21GLB mats={mats} tier={tier} plateText={vehicle.plateText} bannerText={vehicle.windshieldBanner} />
+            </ModelBoundary>
+          ) : manifest ? (
+            <ModelBoundary key="licensed" fallback={procedural}>
               <GlbCar manifest={manifest} mats={mats} interactive={interactive} />
             </ModelBoundary>
-          ) : manifest === null ? (
+          ) : choice === 'realistic' || manifest === null ? (
             procedural
           ) : null}
         </Suspense>
-        <CameraRig enabled={interactive && !introActive} introActive={introActive} />
+        {ORTHO ? (
+          <OrthographicCamera makeDefault zoom={300} position={ORTHO_POS[ORTHO] ?? ORTHO_POS.side} onUpdate={(c) => c.lookAt(0, ORTHO_POS[ORTHO]?.[1] ?? 0.7, 0)} />
+        ) : (
+          <CameraRig enabled={interactive && !introActive} introActive={introActive} />
+        )}
         <IntroDirector active={introActive} onDone={onIntroDone} env={env} />
-        <ViewShift shift={shift} />
+        <ViewShift shift={ORTHO ? 0 : shift} />
         <FpsProbe />
       </Canvas>
     </div>

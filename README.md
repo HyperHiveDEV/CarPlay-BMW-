@@ -108,6 +108,14 @@ Strictement en lecture : écriture, codage, reprogrammation, effacement des déf
 d'actionneurs sont refusés par une liste blanche (JS **et** Kotlin). Les données propriétaires
 BMW (ouvrants, kilométrage, CBS) ne sont pas accessibles avec un adaptateur générique.
 
+## Rendu 3D
+**Modèle définitif** : évaluation des sources proposées et marche à suivre dans [docs/MODELE_DEFINITIF.md](docs/MODELE_DEFINITIF.md).
+Modèles disponibles (Réglages › Rendu 3D › Modèle 3D, ou `?model=` dans l'URL) : **Auto** (modèle sous licence
+`bmw_f21_lci.glb` s'il est présent, sinon RealisticF21), **GLB maquette** (fichier fourni, candidat —
+rapport : [docs/GLB_MAQUETTE_RAPPORT.md](docs/GLB_MAQUETTE_RAPPORT.md)), **RealisticF21** (défaut effectif), **Ancien** (secours).
+État de la reconstitution, limites et apport d'un modèle GLB : [docs/RENDU_3D.md](docs/RENDU_3D.md).
+Outil de calage sur photo : `http://localhost:5173/?ortho=side` (ou `front`, `rear`, `top`).
+
 ## À valider sur le véhicule
 Voir [docs/VALIDATION_VEHICULE.md](docs/VALIDATION_VEHICULE.md).
 

@@ -24,6 +24,7 @@ export function VehicleScreen() {
   const conn = useVehicleRepo((s) => s.connection);
   const defaultCam = useSettings((s) => s.defaultCamera);
   const m = snap.metrics;
+  const canOpen = scene.openingsSupported;
 
   return (
     <div className="pointer-events-none absolute inset-0 flex justify-between gap-6 px-8 pb-2">
@@ -40,6 +41,7 @@ export function VehicleScreen() {
             return (
               <button
                 key={key}
+                disabled={!canOpen}
                 onClick={() => scene.toggle(key)}
                 onMouseEnter={() => scene.set({ hovered: key })}
                 onMouseLeave={() => scene.set({ hovered: null })}
@@ -55,12 +57,14 @@ export function VehicleScreen() {
                     <SourceBadge source={real.source} />
                   </span>
                 </span>
-                <span className="text-xs text-mute">{animOpen ? 'Fermer' : 'Ouvrir'}</span>
+                <span className="text-xs text-mute">{!canOpen ? 'N/D' : animOpen ? 'Fermer' : 'Ouvrir'}</span>
               </button>
             );
           })}
           <p className="px-3 pb-2 pt-1 text-[11px] leading-relaxed text-mute">
-            Animation 3D uniquement : aucune commande d’ouverture, de fermeture ou de verrouillage n’est envoyée au véhicule.
+            {canOpen
+              ? 'Animation 3D uniquement : aucune commande d’ouverture, de fermeture ou de verrouillage n’est envoyée au véhicule.'
+              : 'Le modèle GLB maquette n’a pas d’ouvrants séparés : animations disponibles avec RealisticF21 (Réglages › Rendu 3D › Modèle 3D).'}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3">

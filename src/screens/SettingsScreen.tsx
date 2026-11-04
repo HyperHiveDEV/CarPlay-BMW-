@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSettings, TRANSMISSION_LABEL, type Quality, type Transmission } from '../settings/settingsStore';
+import { useSettings, TRANSMISSION_LABEL, type ModelChoice, type Quality, type Transmission } from '../settings/settingsStore';
 import { useVehicleRepo } from '../vehicle/VehicleDataRepository';
 import { ConnectionManager } from '../vehicle/ConnectionManager';
 import type { BtDevice } from '../obd/transport';
@@ -81,10 +81,25 @@ function ThreeDSection() {
       <Row label="Sensibilité de rotation" hint={`${s.rotateSensitivity.toFixed(1)}×`}>
         <input type="range" min={0.2} max={2} step={0.1} value={s.rotateSensitivity} onChange={(e) => s.set({ rotateSensitivity: Number(e.target.value) })} className="w-56 accent-[rgb(var(--c-accent))]" />
       </Row>
+      <ModelPicker />
       <Row label="Rotation lente automatique" hint="Rotation douce du véhicule à l’accueil.">
         <Toggle checked={s.autoRotate} onChange={(v) => s.set({ autoRotate: v })} />
       </Row>
     </>
+  );
+}
+
+/** Sélecteur de modèle 3D (comparaison dans les mêmes conditions : caméra, éclairage, résolution). */
+function ModelPicker() {
+  const s = useSettings();
+  return (
+    <Row label="Modèle 3D" hint="Auto : modèle sous licence s’il est déposé (bmw_f21_lci.glb), sinon RealisticF21. GLB maquette : fichier personnalisé fourni (candidat, sans ouvrants séparés). En cas d’échec de chargement, repli automatique sur RealisticF21.">
+      <Segmented<ModelChoice>
+        value={s.modelSource}
+        onChange={(v) => s.set({ modelSource: v })}
+        options={[{ value: 'auto', label: 'Auto' }, { value: 'custom', label: 'GLB maquette' }, { value: 'realistic', label: 'RealisticF21' }, { value: 'legacy', label: 'Ancien' }]}
+      />
+    </Row>
   );
 }
 
@@ -208,8 +223,9 @@ function DiagSection() {
       <Row label="Rendu" hint={`Niveau effectif : ${resolveTier(s.quality, 0)} · ${scene.fps} FPS · WebGL ${document.createElement('canvas').getContext('webgl2') ? '2' : '1'}`}>
         <span className="text-sm text-mute">{scene.modelStatus}</span>
       </Row>
-      <Row label="Modèle 3D" hint={scene.modelMessage}>
-        <span className="text-sm text-mute">{scene.modelStatus === 'glb' ? 'GLB' : 'Reconstitution d’après photo'}</span>
+      <ModelPicker />
+      <Row label="Modèle 3D chargé" hint={scene.modelMessage}>
+        <span className="text-sm text-mute">{scene.modelStatus === 'glb' ? 'GLB' : scene.modelStatus === 'error' ? 'Repli' : 'Procédural'}</span>
       </Row>
       <Row label="Données" hint={`Dernière mise à jour : ${repo.snapshot.updatedAt ? new Date(repo.snapshot.updatedAt).toLocaleTimeString('fr-FR') : '—'} · valeurs rejetées par le validateur : ${repo.rejected}`}>
         <span className="text-sm text-mute">{repo.connection.status}</span>

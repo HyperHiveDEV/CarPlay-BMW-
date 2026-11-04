@@ -27,7 +27,8 @@ export default function App() {
   const introEnabled = useSettings((s) => s.introEnabled);
   const dataSource = useSettings((s) => s.dataSource);
   const defaultCamera = useSettings((s) => s.defaultCamera);
-  const [phase, setPhase] = useState<'logo' | 'reveal' | 'done'>(introEnabled ? 'logo' : 'done');
+  const ortho = new URLSearchParams(location.search).has('ortho');
+  const [phase, setPhase] = useState<'logo' | 'reveal' | 'done'>(introEnabled && !ortho ? 'logo' : 'done');
   const motion = useMotionState();
 
   useEffect(() => {

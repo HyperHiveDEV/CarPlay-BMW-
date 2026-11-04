@@ -6,7 +6,7 @@ import { useScene } from '../state/sceneStore';
 import type { OpeningKey } from '../vehicle/types';
 import { OpeningAnimator } from '../animations/OpeningAnimator';
 import { blinkerIntensity, damp } from '../animations/easing';
-import { PART, buildF21Body } from './f21Body';
+import { KIDNEY, PART, buildF21Body } from './f21Body';
 import { SHARK_FIN, SPOILER, WHEELS, X_FRONT, X_REAR, pxX, pxY } from './f21Blueprint';
 import { createBannerTexture, createGlowTexture, createPlateTexture, type CarMaterials, type RenderTier } from './materials';
 import { Wheel } from './Wheel';
@@ -79,12 +79,15 @@ export function RealisticF21({ mats, tier, interactive, plateText, bannerText }:
       doorR: createZoneMaterial(tier, PART.doorR, P0.doorR.pivot, shared),
       hood: createZoneMaterial(tier, PART.hood, P0.hood.pivot, shared),
       tailgate: createZoneMaterial(tier, PART.tailgate, P0.tailgate.pivot, shared),
+      innerDoorL: createZoneMaterial(tier, PART.doorL, P0.doorL.pivot, shared, 'inner'),
+      innerDoorR: createZoneMaterial(tier, PART.doorR, P0.doorR.pivot, shared, 'inner'),
+      innerHood: createZoneMaterial(tier, PART.hood, P0.hood.pivot, shared, 'inner'),
+      innerTailgate: createZoneMaterial(tier, PART.tailgate, P0.tailgate.pivot, shared, 'inner'),
     };
   }, [body, tier, shared]);
   useEffect(() => () => Object.values(zoneMats).forEach((m) => m.dispose()), [zoneMats]);
   const interiorMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#16171a', roughness: 0.92, side: THREE.BackSide }), []);
   const leather = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1c1d20', roughness: 0.7 }), []);
-  const panelInner = useMemo(() => new THREE.MeshStandardMaterial({ color: '#202226', roughness: 0.8, side: THREE.DoubleSide }), []);
 
   // ---------------------------------------------------- placement des accessoires sur la surface
   const hits = useMemo(() => {
@@ -107,14 +110,14 @@ export function RealisticF21({ mats, tier, interactive, plateText, bannerText }:
     const rear = (z: number, y: number) => cast([X_REAR - 1, y, z], [1, 0, 0]);
     const side = (x: number, y: number, s: 1 | -1) => cast([x, y, s * 2], [0, 0, -s]);
     return {
-      rings: [-1, 1].flatMap((s) => [0.45, 0.63].map((z) => ({ s, h: front(s * z, 0.648) }))),
-      brows: [-1, 1].map((s) => ({ s, h: front(s * 0.56, 0.688) })),
-      blinkFront: [-1, 1].map((s) => ({ s, h: front(s * 0.47, 0.607) })),
-      kidneys: [-1, 1].map((s) => ({ s, h: front(s * 0.142, 0.603) })),
+      rings: [-1, 1].flatMap((s) => [[0.47, 0.64], [0.66, 0.655]].map(([z, y]) => ({ s, h: front(s * z, y) }))),
+      brows: [-1, 1].map((s) => ({ s, h: front(s * 0.6, 0.712) })),
+      blinkFront: [-1, 1].map((s) => ({ s, h: front(s * 0.52, 0.592) })),
+      kidneys: [-1, 1].map((s) => ({ s, h: front(s * KIDNEY.cz, KIDNEY.cy) })),
       fogs: [-1, 1].map((s) => ({ s, h: front(s * 0.64, 0.37) })),
-      plateF: front(0, 0.485),
+      plateF: front(0, 0.462),
       plateR: rear(0, 0.5),
-      tow: front(0.33, 0.56),
+      tow: front(0.335, 0.6),
       exhaust: rear(-0.5, 0.27),
       blinkRear: [-1, 1].map((s) => ({ s, h: rear(s * 0.64, 0.84) })),
       tailBars: [-1, 1].map((s) => ({ s, h: rear(s * 0.67, 0.89) })),
@@ -125,6 +128,17 @@ export function RealisticF21({ mats, tier, interactive, plateText, bannerText }:
     };
   }, [body]);
 
+  /** Guide de lumière LED : boucle carrée arrondie ouverte en bas (signature F2x LCI). */
+  const drlGeo = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    const a = 0.05, b = 0.036, n = 4.5;
+    for (let i = 0; i <= 64; i++) {
+      const t = -Math.PI * 0.62 + (i / 64) * Math.PI * 2.24; // ouverture en bas
+      const c = Math.cos(t), sn = Math.sin(t);
+      pts.push(new THREE.Vector3(a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n), 0));
+    }
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 96, 0.0045, 8, false);
+  }, []);
   const spoilerGeo = useMemo(() => profileExtrude(SPOILER, 0.62, 0.012), []);
   const finGeo = useMemo(() => profileExtrude(SHARK_FIN, 0.035, 0.012), []);
   const tex = useMemo(() => ({ glow: createGlowTexture() }), []);
@@ -244,7 +258,7 @@ export function RealisticF21({ mats, tier, interactive, plateText, bannerText }:
     return (
       <group ref={s < 0 ? doorL : doorR} position={part.pivot.toArray()} {...(s < 0 ? clickDriver : clickPass)}>
         <mesh geometry={part.outer} material={s < 0 ? zoneMats.doorL : zoneMats.doorR} castShadow={tierShadow} />
-        {part.inner && <mesh geometry={part.inner} material={panelInner} />}
+        {part.inner && <mesh geometry={part.inner} material={s < 0 ? zoneMats.innerDoorL : zoneMats.innerDoorR} />}
         {/* poignée affleurante couleur carrosserie */}
         <group position={local(hd, part.pivot, 0.006)} quaternion={hd.q}>
           <RoundedBox args={[0.15, 0.03, 0.014]} radius={0.006} smoothness={2} material={mats.paint} />
@@ -307,7 +321,7 @@ export function RealisticF21({ mats, tier, interactive, plateText, bannerText }:
       {door(1)}
       <group ref={hood} position={P.hood.pivot.toArray()} {...clickHood}>
         <mesh geometry={P.hood.outer} material={zoneMats.hood} castShadow={tierShadow} />
-        {P.hood.inner && <mesh geometry={P.hood.inner} material={panelInner} />}
+        {P.hood.inner && <mesh geometry={P.hood.inner} material={zoneMats.innerHood} />}
       </group>
       <group ref={engine} visible={false}>
         {/* B38 : cache moteur, boîte à air, vase d'expansion */}
@@ -319,7 +333,7 @@ export function RealisticF21({ mats, tier, interactive, plateText, bannerText }:
       </group>
       <group ref={tailgate} position={P.tailgate.pivot.toArray()} {...clickTg}>
         <mesh geometry={P.tailgate.outer} material={zoneMats.tailgate} castShadow={tierShadow} />
-        {P.tailgate.inner && <mesh geometry={P.tailgate.inner} material={panelInner} />}
+        {P.tailgate.inner && <mesh geometry={P.tailgate.inner} material={zoneMats.innerTailgate} />}
         <mesh geometry={spoilerGeo} material={mats.gloss} position={[-P.tailgate.pivot.x, -P.tailgate.pivot.y + 0.004, 0]} castShadow={tierShadow} />
         <mesh position={[pxX(1575) - P.tailgate.pivot.x, pxY(96) - P.tailgate.pivot.y, 0]} rotation={[0, 0, 0.6]} material={mats.brake}>
           <boxGeometry args={[0.006, 0.01, 0.3]} />
@@ -335,13 +349,15 @@ export function RealisticF21({ mats, tier, interactive, plateText, bannerText }:
 
       {/* projecteurs : doubles anneaux LED + sourcil + clignotant */}
       {hits.rings.map(({ h }, i) => (
-        <mesh key={i} position={at(h, 0.006)} quaternion={h.q} material={mats.headDrl}>
-          <torusGeometry args={[0.042, 0.006, 8, 32]} />
-        </mesh>
+        <group key={i} position={at(h, 0.004)} quaternion={h.q}>
+          <mesh geometry={drlGeo} material={mats.headDrl} rotation-z={-0.08} />
+          {/* module projecteur LED */}
+          <mesh position={[0, 0.002, -0.004]} material={mats.chrome}><circleGeometry args={[0.022, 24]} /></mesh>
+        </group>
       ))}
       {hits.brows.map(({ s, h }) => (
-        <mesh key={s} position={at(h, 0.004)} quaternion={h.q} rotation-z={s * -0.05} material={mats.headDrl}>
-          <boxGeometry args={[0.3, 0.006, 0.004]} />
+        <mesh key={s} position={at(h, 0.004)} quaternion={h.q} material={mats.headDrl}>
+          <boxGeometry args={[0.36, 0.006, 0.004]} />
         </mesh>
       ))}
       {hits.blinkFront.map(({ s, h }) => (
@@ -352,13 +368,13 @@ export function RealisticF21({ mats, tier, interactive, plateText, bannerText }:
       {/* haricots : barrettes */}
       {hits.kidneys.map(({ s, h }) => (
         <group key={s} position={at(h, -0.004)} quaternion={h.q}>
-          {Array.from({ length: 8 }).map((_, i) => (
-            <mesh key={i} position={[-0.084 + i * 0.024, 0, 0]} material={mats.gloss}>
-              <boxGeometry args={[0.007, 0.11, 0.014]} />
+          {Array.from({ length: 10 }).map((_, i) => (
+            <mesh key={i} position={[-0.108 + i * 0.024, 0, 0]} material={mats.gloss}>
+              <boxGeometry args={[0.008, 0.135, 0.014]} />
             </mesh>
           ))}
           {s < 0 && (
-            <group position={[0.05, -0.045, 0.01]}>
+            <group position={[0.075, -0.058, 0.01]}>
               {[mats.mBlue, mats.mNavy, mats.mRed].map((m, i) => (
                 <mesh key={i} position={[(i - 1) * 0.009, 0, 0]} material={m}><boxGeometry args={[0.007, 0.016, 0.003]} /></mesh>
               ))}
