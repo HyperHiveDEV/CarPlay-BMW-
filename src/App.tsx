@@ -123,7 +123,7 @@ function ModelTag() {
   const hovered = useScene((s) => s.hovered);
   if (status === 'glb' && !hovered) return null;
   return (
-    <div className="pointer-events-none absolute bottom-2 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 text-center">
+    <div className="pointer-events-none absolute left-1/2 top-1 flex -translate-x-1/2 flex-col items-center gap-1 text-center">
       {status !== 'glb' && (
         <span className="rounded-md border border-line bg-ink/60 px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-mute">RECONSTITUTION 3D D’APRÈS VOS PHOTOS</span>
       )}

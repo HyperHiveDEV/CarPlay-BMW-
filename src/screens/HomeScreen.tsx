@@ -32,6 +32,8 @@ export function HomeScreen({ go, ready }: { go: (s: Screen) => void; ready: bool
           })}
           {widgets.length === 0 && <div className="col-span-2 text-sm text-mute">Aucun widget : touchez « Personnaliser ».</div>}
         </div>
+      </div>
+      <div className="pointer-events-auto absolute bottom-[68px] right-8 w-[min(46vw,560px)] stagger">
         <Shortcuts go={go} />
       </div>
       <CameraBar />
