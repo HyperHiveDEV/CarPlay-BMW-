@@ -16,6 +16,24 @@ Sources consultées : [forum SketchUp — revente de modèles sans autorisation]
 [analyse Gridinsoft de model-copy.info](https://gridinsoft.com/online-virus-scanner/url/model_copy-info),
 [licences Sketchfab](https://sketchfab.com/licenses).
 
+## 1 bis. Piste 3dmodels.org — « BMW 1 Series F21 3-door 2015 » (id 30364)
+
+Page non consultable depuis l'environnement (3dmodels.org bloqué) : **géométrie, pièces séparées,
+formats et polygones non vérifiés**. Éléments établis par recherche :
+- **Année** : la F21 restylée (LCI) a été présentée au salon de Genève en mars 2015 ([avtotachki](https://en.avtotachki.com/bmw-1-series-3-h-dvernyj-f21-2015-czena-foto-harakteristiki-2/)) :
+  un modèle « 2015 » est *probablement* LCI, mais à confirmer visuellement (feux arrière en L à LED,
+  projecteurs à double « U » LED, haricots plus larges, bouclier arrière à réflecteurs verticaux).
+- **Licence** ([conditions 3dmodels.org](https://3dmodels.org/licence-terms/)) : licence non exclusive, mondiale, sans limite de durée,
+  paiement unique ; usage explicitement autorisé pour les **applications mobiles et web, jeux et logiciels**.
+  Point à vérifier dans le texte complet : les restrictions de **redistribution du fichier brut** — notre APK
+  embarque le GLB dans ses ressources (extractible) ; demander confirmation écrite au support que cet
+  usage est couvert, ou chiffrer/obfusquer le fichier si exigé.
+- **Finition** : vérifier si le modèle est en finition M Sport (boucliers, bas de caisse) ou standard
+  (dans ce cas, boucliers M Sport à modéliser / acheter séparément).
+
+À relever sur la vue 360° avant tout achat : finition, feux LCI, objets séparés (portières, capot,
+hayon, roues), formats (.blend / .fbx / .max / .obj), nombre de polygones, intérieur, textures.
+
 ## 2. Vérifications à faire sur le candidat n° 2 (page Sketchfab)
 
 - [ ] **Licence** affichée sous le modèle : CC BY / CC BY-SA → OK (créditer l'auteur dans l'application) ;
