@@ -17,7 +17,7 @@ export function ArcGauge({ label, value, min, max, unit, digits = 0, warnAt, swe
   };
   const warn = warnAt != null && value != null && value >= warnAt;
   return (
-    <svg viewBox="0 0 120 104" className="w-full">
+    <svg viewBox="0 0 120 104" className="mx-auto w-full max-w-[130px]">
       <path d={arc(start, start + sweep)} stroke="rgb(var(--c-line))" strokeWidth="7" fill="none" strokeLinecap="round" />
       {warnAt != null && <path d={arc(start + ((warnAt - min) / (max - min)) * sweep, start + sweep)} stroke="#F87171" strokeOpacity=".35" strokeWidth="7" fill="none" />}
       {value != null && t > 0.002 && (

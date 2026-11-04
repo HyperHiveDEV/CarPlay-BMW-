@@ -61,10 +61,10 @@ function Live({ onThresholds, moving }: { onThresholds: () => void; moving: bool
   const thresholds = useSettings((s) => s.alertThresholds);
   const val = (x: Metric) => (x.source === 'NA' || x.value == null ? null : x.value);
   return (
-    <div className="grid grid-cols-[auto_1fr] gap-5">
+    <div className="grid grid-cols-[minmax(0,380px)_minmax(0,1fr)] gap-5">
       <div className="flex flex-col gap-4">
         <div className="card grid place-items-center p-4">
-          <RpmGauge size={Math.min(340, Math.max(250, window.innerHeight * 0.44))} />
+          <RpmGauge size={Math.min(340, Math.max(240, window.innerHeight * 0.4))} />
         </div>
         <div className="card grid grid-cols-3 gap-1 p-3">
           <ArcGauge label="Suralim." value={val(m.boost)} min={-0.8} max={1.6} unit="bar" digits={2} />
