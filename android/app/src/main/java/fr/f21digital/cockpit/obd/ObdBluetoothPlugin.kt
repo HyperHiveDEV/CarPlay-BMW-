@@ -54,14 +54,16 @@ class ObdBluetoothPlugin : Plugin() {
         call.resolve(JSObject().put("available", a != null).put("enabled", a?.isEnabled == true))
     }
 
-    @PluginMethod
-    fun requestPermissions(call: PluginCall) {
-        if (getPermissionState(permAlias) == PermissionState.GRANTED) {
-            call.resolve(JSObject().put("granted", true))
-        } else {
-            requestPermissionForAlias(permAlias, call, "onPermResult")
-        }
+    
+@PluginMethod
+fun requestBluetoothPermissions(call: PluginCall) {
+    if (getPermissionState(permAlias) == PermissionState.GRANTED) {
+        call.resolve(JSObject().put("granted", true))
+    } else {
+        requestPermissionForAlias(permAlias, call, "onPermResult")
     }
+}
+
 
     @PermissionCallback
     private fun onPermResult(call: PluginCall) {
