@@ -75,10 +75,27 @@ d'objets trouvés et la charnière retenue : un « ! » signale un motif à corr
 npm run model:check -- public/models/bmw_f21_lci.glb public/models/model-manifest.json --report docs/validation_modele.md
 ```
 
-Contrôles : glTF lisible, axe Y vertical, longueur 4,324 m ± 4 %, largeur, hauteur, roues au sol,
-nombre de triangles (≥ 100 000, ≤ 600 000), normales, présence et **position des charnières** des
-4 ouvrants (côté conducteur = −Z), pivots de roues au moyeu, empattement 2,69 m, pivots de braquage,
-pièces lumineuses, matériaux nommés. Code de sortie 1 si un contrôle bloquant échoue.
+Contrôles (rapport Markdown : erreurs bloquantes, avertissements, contrôles réussis) :
+- **Fichier** : GLB glTF 2.0, chargement par Three.js, refus des compressions exigeant un décodeur en
+  ligne (Draco, meshopt, Basis — l'application fonctionne hors ligne).
+- **Géométrie** : coordonnées NaN/Infinity, indices invalides, triangles dégénérés, normales absentes
+  ou nulles, nombre de triangles.
+- **Dimensions de carrosserie** (rétroviseurs, échappement, becquet, antenne, plaques, lame,
+  diffuseur, roues, vitres et feux exclus) : longueur 4,324 m, largeur 1,765 m hors rétroviseurs,
+  hauteur ≈ 1,42 m depuis le sol, axe Y vertical, avant vers +X, centrage, pose au sol.
+- **Ouvrants** : 2 portières, capot et hayon présents, séparés, indépendants (aucun contenu dans un
+  autre ni dans une roue), charnières au bon endroit, côté conducteur −Z, axes du manifeste, dimensions.
+- **Roues** : pièces regroupées, pivot au moyeu, diamètre, roue au sol, côtés, essieux alignés,
+  symétrie, empattement 2,690 m, voies, pneus dans le gabarit, pivots de braquage avant, roues arrière fixes.
+- **Matériaux et éclairage** : peinture, vitres, plastiques noirs, jantes, pneus, matériaux nommés ;
+  projecteurs, feux arrière, stop, clignotants déclarés dans le manifeste.
+- **Performances Android** : triangles, appels de rendu, matériaux, mémoire et taille des textures,
+  complexité indicative.
+- **Validation humaine** : état du manifeste et **checklist visuelle** (dont les collisions des
+  ouvrants, non simulées). Un modèle techniquement valide n'est jamais déclaré fidèle ni autorisé à la
+  distribution par le validateur.
+
+Code de sortie 0 = aucun bloquant, 1 = au moins un bloquant, 2 = mauvais usage.
 
 ## Étape 4 — Personnalisation selon les photos
 
