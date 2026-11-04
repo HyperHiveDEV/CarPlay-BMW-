@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import type { ConnectionState, Metric, MetricKey, VehicleSnapshot } from './types';
 import { emptySnapshot } from './types';
 import { VehicleDataValidator } from './VehicleDataValidator';
+import { DEFAULT_THRESHOLDS, THRESHOLD_LIMITS, type AlertThresholds } from './alertThresholds';
+
+let thresholds: AlertThresholds = DEFAULT_THRESHOLDS;
+/** Seuils configurés par l'utilisateur (Réglages / Engine). */
+export const setAlertThresholds = (t: AlertThresholds) => {
+  thresholds = t;
+};
 
 export const HISTORY_KEYS = ['rpm', 'speed', 'boost', 'coolantTemp', 'throttle'] as const;
 export type HistoryKey = (typeof HISTORY_KEYS)[number];
@@ -59,9 +66,12 @@ export const useVehicleRepo = create<RepoState>((set, get) => ({
 /** Alertes informatives de l'application — ne remplacent jamais les alertes du combiné BMW. */
 function deriveAlerts(m: Record<MetricKey, Metric>) {
   const alerts: VehicleSnapshot['alerts'] = [];
-  const c = m.coolantTemp;
-  if (c.value != null && c.value > 112)
-    alerts.push({ id: 'coolant', level: 'critical', message: 'Température liquide élevée', source: c.source });
+  // températures : seuils configurables, uniquement si la mesure existe (jamais sur N/A)
+  for (const k of ['coolantTemp', 'oilTemp', 'intakeAirTemp'] as const) {
+    const x = m[k];
+    if (x.value != null && x.source !== 'NA' && x.value >= thresholds[k])
+      alerts.push({ id: k, level: THRESHOLD_LIMITS[k].level, message: `${THRESHOLD_LIMITS[k].label} : ${Math.round(x.value)} °C (seuil ${thresholds[k]} °C)`, source: x.source });
+  }
   const b = m.battery;
   if (b.value != null && b.value < 11.8)
     alerts.push({ id: 'battery', level: 'warning', message: 'Tension batterie faible', source: b.source });

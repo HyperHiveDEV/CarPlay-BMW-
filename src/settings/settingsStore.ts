@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CameraPreset } from '../three/cameraPresets';
+import type { AcquisitionMode } from '../vehicle/acquisition';
+import { DEFAULT_THRESHOLDS, sanitizeThresholds, type AlertThresholds } from '../vehicle/alertThresholds';
+
+/** Widgets de l'accueil My BMW (ordre = ordre d'affichage). */
+export type HomeWidgetId = 'clock' | 'mileage' | 'maintenance' | 'coolant' | 'battery' | 'fuel' | 'connection' | 'alerts';
+export const ALL_HOME_WIDGETS: HomeWidgetId[] = ['clock', 'maintenance', 'coolant', 'battery', 'mileage', 'fuel', 'connection', 'alerts'];
+export const DEFAULT_HOME_WIDGETS: HomeWidgetId[] = ['clock', 'maintenance', 'coolant', 'battery'];
 
 export type Quality = 'auto' | 'low' | 'medium' | 'high';
 export type Accent = 'blue' | 'violet';
@@ -46,6 +53,9 @@ export interface Settings {
   diagnostics: boolean;
   /** Modèle 3D affiché (voir docs/GLB_MAQUETTE_RAPPORT.md) */
   modelSource: ModelChoice;
+  homeWidgets: HomeWidgetId[];
+  alertThresholds: AlertThresholds;
+  acquisition: AcquisitionMode;
   vehicle: VehicleSpec;
 }
 
@@ -79,6 +89,9 @@ export const DEFAULT_SETTINGS: Settings = {
   lastObdName: null,
   diagnostics: false,
   modelSource: 'auto',
+  homeWidgets: DEFAULT_HOME_WIDGETS,
+  alertThresholds: DEFAULT_THRESHOLDS,
+  acquisition: 'auto',
   vehicle: DEFAULT_VEHICLE,
 };
 
@@ -102,7 +115,13 @@ export const useSettings = create<SettingsStore>()(
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Settings>;
         const modelSource = (['auto', 'custom', 'realistic', 'legacy'] as string[]).includes(p.modelSource as string) ? p.modelSource : 'auto';
-        return { ...current, ...p, modelSource, vehicle: { ...DEFAULT_VEHICLE, ...(p.vehicle ?? {}) } } as typeof current;
+        const homeWidgets = Array.isArray(p.homeWidgets) ? p.homeWidgets.filter((w) => ALL_HOME_WIDGETS.includes(w)) : DEFAULT_HOME_WIDGETS;
+        const acquisition = (['auto', '2', '5', '10'] as string[]).includes(p.acquisition as string) ? p.acquisition : 'auto';
+        return {
+          ...current, ...p, modelSource, homeWidgets, acquisition,
+          alertThresholds: sanitizeThresholds(p.alertThresholds),
+          vehicle: { ...DEFAULT_VEHICLE, ...(p.vehicle ?? {}) },
+        } as typeof current;
       },
     },
   ),

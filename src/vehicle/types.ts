@@ -60,6 +60,12 @@ export interface ConnectionState {
   protocol?: string;
   lastFrameAt?: number;
   errorCount: number;
+  /** cadence réellement obtenue (cycles complets par seconde) */
+  acquisitionHz?: number;
+  /** latence moyenne d'une requête OBD (ms) */
+  latencyMs?: number;
+  /** la fréquence demandée dépasse les capacités de l'adaptateur */
+  limitedByAdapter?: boolean;
 }
 
 export interface VehicleProvider {
