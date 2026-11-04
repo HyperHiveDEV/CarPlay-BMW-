@@ -34,7 +34,7 @@ interface Props {
 }
 
 export function BMWF21GLB({ mats, tier, plateText, bannerText }: Props) {
-  const gltf = useGLTF(CUSTOM_GLB_URL);
+  const gltf = useGLTF(CUSTOM_GLB_URL, false); // pas de décodeur Draco (CDN) : fonctionnement hors ligne
   const baked = useMemo(() => bake(gltf.scene), [gltf.scene]);
 
   // matériaux propres au GLB (vitres différenciées, verre de projecteur)

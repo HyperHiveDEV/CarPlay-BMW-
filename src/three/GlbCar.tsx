@@ -14,7 +14,7 @@ import type { ModelManifest } from './modelManifest';
  * le manifeste et anime les nœuds articulés (rotation autour de leur pivot = charnière).
  */
 export function GlbCar({ manifest, mats, interactive }: { manifest: ModelManifest; mats: CarMaterials; interactive: boolean }) {
-  const gltf = useGLTF(manifest.file);
+  const gltf = useGLTF(manifest.file, false); // pas de décodeur Draco (CDN) : fonctionnement hors ligne
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
 
   const nodes = useMemo(() => {

@@ -5,6 +5,7 @@ import { Icon } from '../components/Icons';
 import { MetricTile, Segmented, SourceBadge, Toggle } from '../components/ui';
 import { CAMERA_PRESETS, type CameraPreset } from '../three/cameraPresets';
 import { useSettings } from '../settings/settingsStore';
+import { useBodyStatus } from '../vehicle/bodyStatus';
 
 const OPENINGS: { key: OpeningKey; icon: keyof typeof Icon }[] = [
   { key: 'driverDoor', icon: 'door' },
@@ -25,6 +26,8 @@ export function VehicleScreen() {
   const defaultCam = useSettings((s) => s.defaultCamera);
   const m = snap.metrics;
   const canOpen = scene.openingsSupported;
+  const bodyStates = useBodyStatus((b) => b.states);
+  const bodySource = useBodyStatus((b) => b.source);
 
   return (
     <div className="pointer-events-none absolute inset-0 flex justify-between gap-6 px-8 pb-2">
@@ -36,7 +39,8 @@ export function VehicleScreen() {
         <div className="card p-2">
           {OPENINGS.map(({ key, icon }) => {
             const I = Icon[icon];
-            const real = snap.openings[key];
+            const body = bodyStates[key];
+            const real = { state: body.state, source: body.state === 'unknown' ? ('NA' as const) : bodySource };
             const animOpen = scene.openings[key];
             return (
               <button

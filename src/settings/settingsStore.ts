@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CameraPreset } from '../three/cameraPresets';
 import type { AcquisitionMode } from '../vehicle/acquisition';
+import type { NavAction } from '../input/actions';
 import { DEFAULT_THRESHOLDS, sanitizeThresholds, type AlertThresholds } from '../vehicle/alertThresholds';
 
 /** Widgets de l'accueil My BMW (ordre = ordre d'affichage). */
@@ -56,6 +57,8 @@ export interface Settings {
   homeWidgets: HomeWidgetId[];
   alertThresholds: AlertThresholds;
   acquisition: AcquisitionMode;
+  /** touches personnalisées → actions de navigation (s'ajoutent au clavier par défaut) */
+  keymap: Record<string, NavAction>;
   vehicle: VehicleSpec;
 }
 
@@ -76,7 +79,7 @@ export const DEFAULT_VEHICLE: VehicleSpec = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  accent: 'violet',
+  accent: 'blue',
   theme: 'night',
   quality: 'auto',
   introEnabled: true,
@@ -92,6 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
   homeWidgets: DEFAULT_HOME_WIDGETS,
   alertThresholds: DEFAULT_THRESHOLDS,
   acquisition: 'auto',
+  keymap: {},
   vehicle: DEFAULT_VEHICLE,
 };
 
@@ -120,6 +124,7 @@ export const useSettings = create<SettingsStore>()(
         return {
           ...current, ...p, modelSource, homeWidgets, acquisition,
           alertThresholds: sanitizeThresholds(p.alertThresholds),
+          keymap: p.keymap && typeof p.keymap === 'object' ? p.keymap : {},
           vehicle: { ...DEFAULT_VEHICLE, ...(p.vehicle ?? {}) },
         } as typeof current;
       },

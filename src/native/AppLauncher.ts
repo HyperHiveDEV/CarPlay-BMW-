@@ -12,8 +12,8 @@ export interface InstalledApp {
 interface AppLauncherNative {
   listApps(): Promise<{ apps: InstalledApp[] }>;
   launch(opts: { packageName: string }): Promise<void>;
-  openCategory(opts: { category: 'music' | 'maps' }): Promise<{ launched: boolean }>;
-  openSettings(opts: { panel: 'bluetooth' | 'sound' }): Promise<void>;
+  openCategory(opts: { category: 'music' | 'maps' | 'browser' }): Promise<{ launched: boolean }>;
+  openSettings(opts: { panel: 'bluetooth' | 'sound' | 'general' }): Promise<void>;
   mediaKey(opts: { key: 'play_pause' | 'next' | 'previous' }): Promise<void>;
   getVolume(): Promise<{ value: number; max: number }>;
   setVolume(opts: { value: number }): Promise<void>;
@@ -26,8 +26,8 @@ export const NATIVE_ONLY = 'Disponible dans l’application Android (APK). Sur P
 export const AppLauncher = {
   listApps: async () => (nativeAvailable() ? (await Native.listApps()).apps : []),
   launch: (packageName: string) => Native.launch({ packageName }),
-  openCategory: async (category: 'music' | 'maps') => (await Native.openCategory({ category })).launched,
-  openSettings: (panel: 'bluetooth' | 'sound') => Native.openSettings({ panel }),
+  openCategory: async (category: 'music' | 'maps' | 'browser') => (await Native.openCategory({ category })).launched,
+  openSettings: (panel: 'bluetooth' | 'sound' | 'general') => Native.openSettings({ panel }),
   mediaKey: (key: 'play_pause' | 'next' | 'previous') => Native.mediaKey({ key }),
   getVolume: () => Native.getVolume(),
   setVolume: (value: number) => Native.setVolume({ value }),

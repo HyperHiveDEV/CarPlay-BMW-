@@ -138,7 +138,7 @@ function EntryForm({ initial, currentKm, onClose }: { initial: MaintenanceEntry 
     onClose();
   };
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div data-nav-modal className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="card w-[min(640px,92vw)] p-6 screen-enter" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-xl font-light">{initial ? 'Modifier l’intervention' : 'Nouvelle intervention'}</h2>

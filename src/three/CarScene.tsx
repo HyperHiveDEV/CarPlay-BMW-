@@ -54,6 +54,21 @@ function CameraRig({ enabled, introActive }: { enabled: boolean; introActive: bo
     animating.current = true;
   }, [nonce, preset, goal]);
 
+  // commandes d'orbite (molette / clavier) : rotation et zoom autour de la cible, transition douce
+  const orbitCmd = useScene((s) => s.orbitCmd);
+  useEffect(() => {
+    if (!orbitCmd.n || !controls.current) return;
+    const target = animating.current ? goal.target.clone() : controls.current.target.clone();
+    const from = animating.current ? goal.pos.clone() : camera.position.clone();
+    const sph = new THREE.Spherical().setFromVector3(from.sub(target));
+    sph.theta += orbitCmd.dAz;
+    sph.phi = THREE.MathUtils.clamp(sph.phi + orbitCmd.dPol, 0.15, Math.PI / 2 - 0.04);
+    sph.radius = THREE.MathUtils.clamp(sph.radius * orbitCmd.zoom, 2.4, 13);
+    goal.pos.copy(new THREE.Vector3().setFromSpherical(sph).add(target));
+    goal.target.copy(target);
+    animating.current = true;
+  }, [orbitCmd, camera, goal]);
+
   useEffect(() => {
     // position de départ de l'intro : plus loin et décalée
     const p = CAMERA_PRESETS[useScene.getState().camera];
@@ -196,7 +211,16 @@ function Studio({ tier, env }: { tier: RenderTier; env: { intensity: number } })
           <meshStandardMaterial color="#0b0d11" roughness={0.7} metalness={0.2} />
         </mesh>
       )}
-      <ContactShadows position={[0, 0.002, 0]} opacity={0.85} scale={9} blur={2.4} far={1.6} resolution={tier === 'low' ? 256 : 512} frames={tier === 'low' ? 1 : Infinity} color="#000" />
+      {/* plateforme : anneau discret sous le véhicule */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
+        <ringGeometry args={[3.05, 3.09, 128]} />
+        <meshBasicMaterial color="#5a6b85" transparent opacity={0.35} toneMapped={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+        <circleGeometry args={[3.05, 96]} />
+        <meshStandardMaterial color="#121620" roughness={0.6} metalness={0.3} transparent opacity={0.55} />
+      </mesh>
+      <ContactShadows position={[0, 0.004, 0]} opacity={0.85} scale={9} blur={2.4} far={1.6} resolution={tier === 'low' ? 256 : 512} frames={tier === 'low' ? 1 : Infinity} color="#000" />
     </>
   );
 }

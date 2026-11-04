@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ACTION_LABEL, DEFAULT_KEYMAP, NAV_ACTIONS, type NavAction } from '../input/actions';
+import { InputManager } from '../input/InputManager';
 import { useSettings, TRANSMISSION_LABEL, type ModelChoice, type Quality, type Transmission } from '../settings/settingsStore';
 import { useVehicleRepo } from '../vehicle/VehicleDataRepository';
 import { ConnectionManager } from '../vehicle/ConnectionManager';
@@ -11,13 +13,16 @@ import { Icon } from '../components/Icons';
 import { resolveTier } from '../three/CarScene';
 import type { DemoScenario } from '../vehicle/SimulatedVehicleProvider';
 import type { AcquisitionMode } from '../vehicle/acquisition';
+import { simulatedBody, useBodyStatus } from '../vehicle/bodyStatus';
+import type { OpeningKey } from '../vehicle/types';
 
-type Section = 'appearance' | '3d' | 'vehicle' | 'data' | 'diag';
+type Section = 'appearance' | '3d' | 'vehicle' | 'data' | 'controls' | 'diag';
 const SECTIONS: { id: Section; label: string }[] = [
   { id: 'appearance', label: 'Interface' },
   { id: '3d', label: 'Rendu 3D' },
   { id: 'vehicle', label: 'Véhicule' },
   { id: 'data', label: 'Source de données' },
+  { id: 'controls', label: 'Commandes' },
   { id: 'diag', label: 'Diagnostic' },
 ];
 
@@ -44,7 +49,7 @@ export function SettingsScreen() {
           {sec === 'appearance' && (
             <>
               <Row label="Couleur d’accent" hint="Le violet rappelle les phares personnalisés.">
-                <Segmented value={s.accent} onChange={(v) => s.set({ accent: v })} options={[{ value: 'violet', label: 'Violet' }, { value: 'blue', label: 'Bleu électrique' }]} />
+                <Segmented value={s.accent} onChange={(v) => s.set({ accent: v })} options={[{ value: 'blue', label: 'Bleu BMW' }, { value: 'violet', label: 'Violet' }]} />
               </Row>
               <Row label="Mode d’affichage" hint="Jour : contraste renforcé pour la lecture au soleil.">
                 <Segmented value={s.theme} onChange={(v) => s.set({ theme: v })} options={[{ value: 'night', label: 'Nuit' }, { value: 'day', label: 'Jour' }]} />
@@ -60,6 +65,7 @@ export function SettingsScreen() {
           {sec === '3d' && <ThreeDSection />}
           {sec === 'vehicle' && <VehicleSection />}
           {sec === 'data' && <DataSection />}
+          {sec === 'controls' && <ControlsSection />}
           {sec === 'diag' && <DiagSection />}
         </div>
       </div>
@@ -213,6 +219,66 @@ function DataSection() {
   );
 }
 
+/** États des ouvrants : simulation manuelle (démo) et option de synchronisation de l'animation 3D. */
+function BodySimulation() {
+  const body = useBodyStatus();
+  const demo = useSettings((s) => s.dataSource === 'demo');
+  const keys: [OpeningKey, string][] = [['driverDoor', 'Portière cond.'], ['passengerDoor', 'Portière pass.'], ['tailgate', 'Hayon'], ['hood', 'Capot']];
+  return (
+    <>
+      <Row label="Synchroniser la 3D avec l’état des ouvrants" hint={`Source : ${body.kind === 'simulated' ? 'simulation (DEMO)' : 'aucune source réelle validée — états inconnus'}. Aucune commande n’est jamais envoyée au véhicule.`}>
+        <Toggle checked={body.sync} onChange={(v) => body.set({ sync: v })} />
+      </Row>
+      <Row label="Simuler un signal d’ouvrant (DEMO)" hint="Filtrage anti-rebond 300 ms ; sans source réelle, les états restent « inconnu ».">
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {keys.map(([k, l]) => {
+            const st = body.states[k].state;
+            return (
+              <button key={k} className={`btn px-2.5 py-1.5 text-xs ${st === 'open' ? 'btn-on' : ''}`} disabled={!demo}
+                onClick={() => { simulatedBody.simulate(k, st === 'open' ? 'closed' : 'open'); setTimeout(() => simulatedBody.simulate(k, st === 'open' ? 'closed' : 'open'), 350); }}>
+                {l} : {st === 'unknown' ? 'inconnu' : st === 'open' ? 'ouvert' : 'fermé'}
+              </button>
+            );
+          })}
+        </div>
+      </Row>
+    </>
+  );
+}
+
+/** Commandes : molette iDrive (future passerelle), clavier, télécommande USB, croix Android. */
+function ControlsSection() {
+  const s = useSettings();
+  const [capture, setCapture] = useState<NavAction | null>(null);
+  const map = { ...DEFAULT_KEYMAP, ...s.keymap };
+  const keysFor = (a: NavAction) => Object.entries(map).filter(([, v]) => v === a).map(([k]) => (k === ' ' ? 'Espace' : k));
+  useEffect(() => {
+    if (!capture) return;
+    const on = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const k = InputManager.keyOf(e);
+      if (k && k !== 'Escape') s.set({ keymap: { ...s.keymap, [k]: capture } });
+      setCapture(null);
+    };
+    window.addEventListener('keydown', on, { capture: true });
+    return () => window.removeEventListener('keydown', on, { capture: true });
+  }, [capture, s]);
+  return (
+    <>
+      <Notice>Interface pilotable sans écran tactile. La réception réelle des commandes iDrive dépendra de la passerelle matérielle choisie ; elle enverra ces mêmes actions à l’application.</Notice>
+      {NAV_ACTIONS.map((a) => (
+        <Row key={a} label={ACTION_LABEL[a]} hint={keysFor(a).join(' · ') || 'aucune touche'}>
+          <button className={`btn px-3 py-1.5 text-xs ${capture === a ? 'btn-on' : ''}`} onClick={() => setCapture(a)}>{capture === a ? 'Appuyez sur une touche…' : 'Ajouter une touche'}</button>
+        </Row>
+      ))}
+      <Row label="Touches personnalisées" hint={Object.keys(s.keymap).length ? Object.entries(s.keymap).map(([k, v]) => `${k} → ${ACTION_LABEL[v]}`).join(' · ') : 'aucune'}>
+        <button className="btn px-3 py-1.5 text-xs" disabled={!Object.keys(s.keymap).length} onClick={() => s.set({ keymap: {} })}>Réinitialiser</button>
+      </Row>
+    </>
+  );
+}
+
 function DiagSection() {
   const s = useSettings();
   const scene = useScene();
@@ -237,6 +303,7 @@ function DiagSection() {
       <Row label="Données" hint={`Dernière mise à jour : ${repo.snapshot.updatedAt ? new Date(repo.snapshot.updatedAt).toLocaleTimeString('fr-FR') : '—'} · valeurs rejetées par le validateur : ${repo.rejected}`}>
         <span className="text-sm text-mute">{repo.connection.status}</span>
       </Row>
+      <BodySimulation />
       <Row label="Test de la garde lecture seule" hint="Vérifie si une commande serait transmise à l’adaptateur.">
         <div className="flex items-center gap-2">
           <input className="input w-32 font-mono" value={cmd} onChange={(e) => setCmd(e.target.value)} />

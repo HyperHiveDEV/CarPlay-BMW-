@@ -1,134 +1,182 @@
 import { useState } from 'react';
-import { ALL_HOME_WIDGETS, TRANSMISSION_LABEL, useSettings, type HomeWidgetId } from '../settings/settingsStore';
-import { useScene, OPENING_LABEL } from '../state/sceneStore';
+import { ALL_HOME_WIDGETS, useSettings, type HomeWidgetId } from '../settings/settingsStore';
+import { useScene } from '../state/sceneStore';
 import { useVehicleRepo } from '../vehicle/VehicleDataRepository';
 import { Icon } from '../components/Icons';
-import { Segmented, useMetricDisplay } from '../components/ui';
+import { SourceBadge, useMetricDisplay } from '../components/ui';
 import { WIDGETS, WIDGET_LABEL } from '../components/HomeWidgets';
+import { fmtDate, fmtTime, useNow } from '../components/Clock';
 import { CAMERA_PRESETS, type CameraPreset } from '../three/cameraPresets';
+import { AppLauncher, nativeAvailable } from '../native/AppLauncher';
+import { thresholdState } from '../vehicle/alertThresholds';
+import type { Density } from '../components/layout';
 import type { Screen } from '../App';
-import type { OpeningKey } from '../vehicle/types';
-import { useTelemetry } from '../vehicle/telemetry';
+import type { Metric } from '../vehicle/types';
 
-/** My BMW V2 : identité du véhicule, widgets personnalisables, raccourcis, BMW 3D (7 caméras). */
-export function HomeScreen({ go, ready }: { go: (s: Screen) => void; ready: boolean }) {
+/**
+ * My BMW — tableau de bord OEM+ en trois zones : barre latérale (App), zone centrale dédiée à la
+ * BMW 3D (titre, caméras, widgets), colonne de droite compacte (heure, véhicule, mesures, OBD, médias).
+ * Entièrement utilisable au clavier / à la molette (zones « main » et « aside »).
+ */
+export function HomeScreen({ go, ready, density, can3d }: { go: (s: Screen) => void; ready: boolean; density: Density; can3d: boolean }) {
   const [editing, setEditing] = useState(false);
-  const widgets = useSettings((s) => s.homeWidgets);
   if (!ready) return null;
   return (
     <div className="pointer-events-none absolute inset-0 flex">
-      <div className="pointer-events-auto flex h-full w-[min(38vw,470px)] flex-col gap-3 overflow-y-auto pb-2 pl-10 pr-1 stagger">
-        <Identity />
-        <div className="flex items-center justify-between pt-1">
-          <span className="label">Widgets</span>
-          <button className="btn px-3 py-1.5 text-xs" onClick={() => setEditing(true)}>
-            <Icon.edit width={14} height={14} /> Personnaliser
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {widgets.map((id) => {
-            const W = WIDGETS[id];
-            return <W key={id} />;
-          })}
-          {widgets.length === 0 && <div className="col-span-2 text-sm text-mute">Aucun widget : touchez « Personnaliser ».</div>}
-        </div>
-      </div>
-      <div className="pointer-events-auto absolute bottom-[68px] right-8 w-[min(46vw,560px)] stagger">
-        <Shortcuts go={go} />
-      </div>
-      <CameraBar />
+      <MainZone density={density} can3d={can3d} onEdit={() => setEditing(true)} />
+      <Aside go={go} density={density} />
       {editing && <WidgetEditor onClose={() => setEditing(false)} />}
     </div>
   );
 }
 
-function Identity() {
+// ------------------------------------------------------------------ zone centrale
+function MainZone({ density, can3d, onEdit }: { density: Density; can3d: boolean; onEdit: () => void }) {
   const v = useSettings((s) => s.vehicle);
-  const gain = v.declaredHp - v.stockHp;
+  const widgets = useSettings((s) => s.homeWidgets);
+  const scene = useScene();
+  const max = density === 'tiny' ? 3 : 4;
+  const shown = widgets.slice(0, max);
+  const cams: CameraPreset[] = density === 'tiny' ? ['front34', 'side', 'rear34', 'wheel'] : (Object.keys(CAMERA_PRESETS) as CameraPreset[]);
   return (
-    <div>
-      <div className="label">My BMW</div>
-      <h1 className="mt-1.5 text-[clamp(38px,4.6vw,64px)] font-extralight leading-none tracking-tight">{v.name}</h1>
-      <div className="mt-2.5 flex flex-wrap gap-2 text-xs">
-        {[v.generation, 'M Sport', '3 portes', '2018'].map((t) => (
-          <span key={t} className="rounded-md border border-line px-2 py-1 text-mute">{t}</span>
-        ))}
-      </div>
-      <div className="card mt-4 p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="label">Moteur</div>
-            <div className="mt-1 text-xl">{v.engine} · {(v.displacementCc / 1000).toFixed(1)} L Turbo</div>
-            <div className="text-xs text-mute">{v.cylinders} cylindres en ligne · essence · {v.displacementCc} cm³</div>
-          </div>
-          <span className="rounded-md border border-accent/50 bg-accent/10 px-2 py-1 text-xs font-semibold tracking-wider text-accent">{v.stage.toUpperCase()}</span>
+    <section data-nav-zone="main" data-nav-order="1" aria-label="Vue véhicule" className="relative flex min-w-0 flex-1 flex-col px-5 pb-3 pt-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="pointer-events-none">
+          <div className="label">My BMW</div>
+          <h1 className="mt-1 text-[2.3rem] font-extralight leading-none tracking-tight">{v.name}</h1>
+          <div className="mt-1.5 text-[0.8rem] text-mute">{v.generation} · M Sport · 3 portes · {v.engine} {v.stage}</div>
         </div>
-        <div className="mt-4">
-          <div className="flex items-baseline justify-between">
-            <span className="label">Puissance déclarée</span>
-            <span><span className="text-3xl font-light tabular-nums">{v.declaredHp}</span> <span className="text-sm text-mute">ch</span></span>
-          </div>
-          {/* barre origine → préparation : valeurs déclaratives, non mesurées */}
-          <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-line/60">
-            <div className="absolute inset-y-0 left-0 rounded-full bg-mute/50" style={{ width: `${(v.stockHp / v.declaredHp) * 100}%` }} />
-            <div className="absolute inset-y-0 rounded-full bg-accent" style={{ left: `${(v.stockHp / v.declaredHp) * 100}%`, right: 0, animation: 'fadeUp .8s both' }} />
-          </div>
-          <div className="mt-1.5 flex justify-between text-xs text-mute">
-            <span>origine {v.stockHp} ch</span>
-            <span>+{gain} ch ({Math.round((gain / v.stockHp) * 100)} %) · déclaratif, non mesuré</span>
-          </div>
+        <div className="pointer-events-auto flex flex-wrap justify-end gap-1.5">
+          <button className={`chip ${scene.navMode === 'scene' ? 'chip-on' : ''}`} disabled={!can3d} onClick={() => scene.set({ navMode: scene.navMode === 'scene' ? 'ui' : 'scene' })} title="Piloter la vue 3D avec les commandes directionnelles">
+            <Icon.rotate width={14} height={14} /> Vue 3D
+          </button>
+          {cams.map((c) => (
+            <button key={c} className={`chip ${scene.camera === c ? 'chip-on' : ''}`} disabled={!can3d} onClick={() => scene.goCamera(c)}>{CAMERA_PRESETS[c].label}</button>
+          ))}
         </div>
-        <div className="mt-3 border-t border-line/60 pt-2.5 text-xs text-mute">Transmission : {TRANSMISSION_LABEL[v.transmission]}</div>
       </div>
-    </div>
+      <div className="flex-1" />
+      <div className="pointer-events-auto grid items-stretch gap-2.5" style={{ gridTemplateColumns: `repeat(${Math.max(1, shown.length)}, minmax(0, 1fr)) auto`, height: density === 'tiny' ? '5.6rem' : '6.6rem' }}>
+        {shown.map((id) => {
+          const W = WIDGETS[id];
+          return <W key={id} />;
+        })}
+        <button className="card flex w-[3.2rem] flex-col items-center justify-center gap-1 text-[0.62rem] text-mute transition hover:text-fg" onClick={onEdit} aria-label="Personnaliser les widgets">
+          <Icon.edit width={16} height={16} /> {widgets.length > max ? `+${widgets.length - max}` : 'Éditer'}
+        </button>
+      </div>
+    </section>
   );
 }
 
-function Shortcuts({ go }: { go: (s: Screen) => void }) {
-  const scene = useScene();
-  const rpm = useMetricDisplay(useVehicleRepo((s) => s.snapshot.metrics.rpm));
-  const coolant = useMetricDisplay(useVehicleRepo((s) => s.snapshot.metrics.coolantTemp));
-  const recording = useTelemetry((s) => !!s.recording);
-  const open = (Object.keys(scene.openings) as OpeningKey[]).filter((k) => scene.openings[k]);
-  const items: { id: Screen; label: string; icon: keyof typeof Icon; sub: string }[] = [
-    { id: 'vehicle', label: 'Vehicle', icon: 'car', sub: open.length ? `${open.map((k) => OPENING_LABEL[k].toLowerCase()).join(', ')} ouvert(s)` : 'ouvrants, feux, caméras' },
-    { id: 'engine', label: 'Engine', icon: 'engine', sub: `${rpm.text} tr/min · ${coolant.text} °C${recording ? ' · REC' : ''}` },
-    { id: 'maintenance', label: 'Maintenance', icon: 'wrench', sub: 'carnet et échéances' },
+// ------------------------------------------------------------------ colonne de droite
+function Aside({ go, density }: { go: (s: Screen) => void; density: Density }) {
+  const now = useNow(1000);
+  const v = useSettings((s) => s.vehicle);
+  const m = useVehicleRepo((s) => s.snapshot.metrics);
+  const limit = useSettings((s) => s.alertThresholds.coolantTemp);
+  return (
+    <aside data-nav-zone="aside" data-nav-order="2" aria-label="Informations"
+      className="pointer-events-auto flex h-full shrink-0 flex-col gap-2 border-l border-line/40 bg-panel/55 p-3 backdrop-blur-md" style={{ width: '18.5rem' }}>
+      <div className="flex items-end justify-between px-1">
+        <div className="text-[2.6rem] font-extralight leading-none tabular-nums">{fmtTime(now)}</div>
+        <div className="pb-1 text-right text-[0.72rem] capitalize leading-tight text-mute">{fmtDate(now)}</div>
+      </div>
+      <button className="card flex items-center gap-3 px-3 py-2.5 text-left" onClick={() => go('vehicle')}>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-mute"><Icon.car width={18} height={18} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[0.9rem]">{v.name} · {v.generation}</span>
+          <span className="block truncate text-[0.7rem] text-mute">{v.engine} 1.5 Turbo · {v.stage} · {v.declaredHp} ch déclarés</span>
+        </span>
+      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <AsideMetric label="Vitesse" metric={m.speed} unit="km/h" onClick={() => go('engine')} />
+        <AsideMetric label="Liquide refr." metric={m.coolantTemp} unit="°C" onClick={() => go('engine')} tone={thresholdState(m.coolantTemp.value, m.coolantTemp.source, limit)} />
+        <AsideMetric label="Batterie" metric={m.battery} unit="V" digits={1} onClick={() => go('engine')} />
+        <AsideMetric label="Turbo" metric={m.boost} unit="bar" digits={2} onClick={() => go('engine')} />
+      </div>
+      <ObdStatus onClick={() => go('settings')} />
+      {density !== 'tiny' && <div className="flex-1" />}
+      <MediaShortcuts go={go} />
+    </aside>
+  );
+}
+
+function AsideMetric({ label, metric, unit, digits = 0, onClick, tone }: { label: string; metric: Metric; unit: string; digits?: number; onClick: () => void; tone?: string }) {
+  const d = useMetricDisplay(metric, digits);
+  const ring = tone === 'over' ? 'border-bad/70' : tone === 'near' ? 'border-warn/60' : '';
+  return (
+    <button className={`card px-3 py-2 text-left ${ring}`} onClick={onClick}>
+      <span className="flex items-center justify-between gap-1"><span className="label truncate !text-[0.6rem]">{label}</span><SourceBadge source={d.source} /></span>
+      <span className="mt-1 block text-[1.55rem] font-light leading-none tabular-nums">{d.text}<span className="ml-1 text-[0.7rem] text-mute">{unit}</span></span>
+    </button>
+  );
+}
+
+function ObdStatus({ onClick }: { onClick: () => void }) {
+  const c = useVehicleRepo((s) => s.connection);
+  const updatedAt = useVehicleRepo((s) => s.snapshot.updatedAt);
+  const now = useNow(1000).getTime();
+  const age = updatedAt ? (now - updatedAt) / 1000 : null;
+  const stale = age != null && age > 5;
+  // qualité : simulation, ou d'après la latence et les erreurs mesurées
+  const quality = c.status === 'demo' ? { n: 3, t: 'simulation' } : c.status !== 'connected' ? { n: 0, t: 'aucune' } : stale ? { n: 0, t: 'perte de signal' } : (c.latencyMs ?? 999) < 80 && c.errorCount < 3 ? { n: 3, t: 'bonne' } : (c.latencyMs ?? 999) < 200 ? { n: 2, t: 'moyenne' } : { n: 1, t: 'faible' };
+  const label = { demo: 'Démonstration', disconnected: 'OBD déconnecté', scanning: 'Recherche…', connecting: 'Connexion…', initializing: 'Initialisation…', connected: 'OBD-II connecté', error: 'Erreur OBD' }[c.status];
+  return (
+    <button className={`card px-3 py-2 text-left ${c.status === 'error' || stale ? 'border-bad/60' : ''}`} onClick={onClick}>
+      <span className="flex items-center justify-between">
+        <span className="flex items-center gap-2 text-[0.82rem]">
+          <span className={`h-2 w-2 rounded-full ${c.status === 'connected' && !stale ? 'bg-ok' : c.status === 'demo' ? 'bg-accent' : c.status === 'error' || stale ? 'bg-bad' : 'bg-mute'}`} />
+          {label}
+        </span>
+        <span className="flex items-end gap-0.5" aria-label={`qualité ${quality.t}`}>
+          {[1, 2, 3].map((i) => <span key={i} className={`w-1 rounded-sm ${i <= quality.n ? 'bg-fg/80' : 'bg-line'}`} style={{ height: `${0.3 + i * 0.22}rem` }} />)}
+        </span>
+      </span>
+      <span className="mt-0.5 block truncate text-[0.68rem] text-mute">
+        {c.acquisitionHz ? `${c.acquisitionHz} Hz` : '—'}{c.latencyMs ? ` · ${c.latencyMs} ms` : ''} · qualité {quality.t}{age != null ? ` · données il y a ${age < 1 ? '< 1' : Math.round(age)} s` : ''}
+      </span>
+    </button>
+  );
+}
+
+/** Raccourcis multimédias : actifs uniquement dans l'APK Android (aucune intégration simulée). */
+function MediaShortcuts({ go }: { go: (s: Screen) => void }) {
+  const native = nativeAvailable();
+  const [err, setErr] = useState<string | null>(null);
+  const run = (fn: () => Promise<unknown>) => async () => {
+    setErr(null);
+    try { await fn(); } catch (e) { setErr((e as Error).message); }
+  };
+  const items: { label: string; icon: keyof typeof Icon; act: () => void }[] = [
+    { label: 'Navigation', icon: 'nav', act: run(async () => { if (!(await AppLauncher.openCategory('maps'))) throw new Error('Aucune application de navigation'); }) },
+    { label: 'Musique', icon: 'media', act: run(async () => { if (!(await AppLauncher.openCategory('music'))) throw new Error('Aucun lecteur'); }) },
+    { label: 'Navigateur', icon: 'link', act: run(async () => { if (!(await AppLauncher.openCategory('browser'))) throw new Error('Aucun navigateur'); }) },
+    { label: 'Réglages', icon: 'settings', act: run(() => AppLauncher.openSettings('general')) },
   ];
   return (
-    <div className="grid grid-cols-3 gap-2.5 pt-1">
-      {items.map((it) => {
-        const I = Icon[it.icon];
-        return (
-          <button key={it.id} onClick={() => go(it.id)} className="card group flex flex-col items-start gap-2 p-3 text-left transition duration-300 hover:-translate-y-0.5 hover:border-accent/50 active:scale-[.98]">
-            <span className="grid h-9 w-9 place-items-center rounded-xl border border-line text-mute transition group-hover:border-accent group-hover:text-accent"><I width={18} height={18} /></span>
-            <span className="text-sm">{it.label}</span>
-            <span className="line-clamp-2 text-[11px] leading-snug text-mute">{it.sub}</span>
-          </button>
-        );
-      })}
+    <div>
+      <div className="mb-1.5 flex items-center justify-between px-1">
+        <span className="label !text-[0.6rem]">Applications</span>
+        {!native && <span className="text-[0.6rem] text-mute">disponibles dans l’APK</span>}
+      </div>
+      <div className="grid grid-cols-4 gap-1.5">
+        {items.map((it) => {
+          const I = Icon[it.icon];
+          return (
+            <button key={it.label} disabled={!native} onClick={it.act} className="card flex flex-col items-center gap-1 px-1 py-2 text-[0.6rem] text-mute disabled:opacity-40">
+              <I width={18} height={18} /> {it.label}
+            </button>
+          );
+        })}
+      </div>
+      {err && <div className="mt-1 text-[0.65rem] text-warn">{err}</div>}
+      <button className="sr-only" onClick={() => go('media')}>Multimédia</button>
     </div>
   );
 }
 
-function CameraBar() {
-  const scene = useScene();
-  return (
-    <div className="pointer-events-auto absolute bottom-3 right-8 flex flex-wrap items-center justify-end gap-3">
-      <Segmented<CameraPreset>
-        value={scene.camera}
-        onChange={(c) => scene.goCamera(c)}
-        options={(Object.keys(CAMERA_PRESETS) as CameraPreset[]).map((c) => ({ value: c, label: CAMERA_PRESETS[c].label }))}
-      />
-      <Segmented
-        value={scene.lightMode}
-        onChange={(m) => scene.set({ lightMode: m })}
-        options={[{ value: 'off', label: 'Feux off' }, { value: 'white', label: 'Blanc' }, { value: 'violet', label: 'Violet' }]}
-      />
-    </div>
-  );
-}
-
+// ------------------------------------------------------------------ éditeur de widgets
 function WidgetEditor({ onClose }: { onClose: () => void }) {
   const widgets = useSettings((s) => s.homeWidgets);
   const set = useSettings((s) => s.set);
@@ -143,30 +191,30 @@ function WidgetEditor({ onClose }: { onClose: () => void }) {
   const toggle = (id: HomeWidgetId) => set({ homeWidgets: widgets.includes(id) ? widgets.filter((w) => w !== id) : [...widgets, id] });
   const ordered = [...widgets, ...ALL_HOME_WIDGETS.filter((w) => !widgets.includes(w))];
   return (
-    <div className="pointer-events-auto fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="card w-[min(520px,92vw)] p-6 screen-enter" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-light">Widgets de l’accueil</h2>
-          <button className="btn px-2 py-2" onClick={onClose} aria-label="Fermer"><Icon.close width={18} height={18} /></button>
+    <div data-nav-modal className="pointer-events-auto fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="card max-h-[92vh] w-[min(32rem,92vw)] overflow-y-auto p-5 screen-enter" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-light">Widgets de l’accueil</h2>
+          <button data-nav-close className="btn px-2 py-2" onClick={onClose} aria-label="Fermer"><Icon.close width={16} height={16} /></button>
         </div>
         <div className="space-y-1.5">
           {ordered.map((id) => {
             const on = widgets.includes(id);
             return (
-              <div key={id} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${on ? 'border-accent/40 bg-accent/5' : 'border-line'}`}>
+              <div key={id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${on ? 'border-accent/40 bg-accent/5' : 'border-line'}`}>
                 <button role="switch" aria-checked={on} aria-label={WIDGET_LABEL[id]} onClick={() => toggle(id)} className={`h-5 w-5 rounded-md border ${on ? 'border-accent bg-accent' : 'border-line'}`} />
                 <span className={`flex-1 text-sm ${on ? '' : 'text-mute'}`}>{WIDGET_LABEL[id]}</span>
                 {on && (
                   <>
-                    <button className="btn px-2 py-1 text-xs" aria-label="Monter" onClick={() => move(id, -1)}>↑</button>
-                    <button className="btn px-2 py-1 text-xs" aria-label="Descendre" onClick={() => move(id, 1)}>↓</button>
+                    <button className="btn px-2 py-1 text-xs" aria-label={`Monter ${WIDGET_LABEL[id]}`} onClick={() => move(id, -1)}>↑</button>
+                    <button className="btn px-2 py-1 text-xs" aria-label={`Descendre ${WIDGET_LABEL[id]}`} onClick={() => move(id, 1)}>↓</button>
                   </>
                 )}
               </div>
             );
           })}
         </div>
-        <p className="mt-4 text-xs text-mute">Choix et ordre enregistrés localement. Les valeurs N/A ne sont jamais remplacées par des estimations.</p>
+        <p className="mt-3 text-xs text-mute">Les 3 (petit écran) ou 4 premiers widgets s’affichent sous la BMW. Les valeurs N/A ne sont jamais remplacées par des estimations.</p>
       </div>
     </div>
   );

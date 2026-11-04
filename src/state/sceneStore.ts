@@ -25,6 +25,11 @@ interface SceneState {
   introDone: boolean;
   /** faux si le modèle affiché n'a pas d'ouvrants séparés (GLB maquette) */
   openingsSupported: boolean;
+  /** 'scene' : les commandes directionnelles pilotent la caméra 3D (navigation sans tactile) */
+  navMode: 'ui' | 'scene';
+  /** dernière commande d'orbite (rotation horizontale/verticale en radians, zoom en facteur) */
+  orbitCmd: { dAz: number; dPol: number; zoom: number; n: number };
+  orbit: (dAz: number, dPol: number, zoom?: number) => void;
   fps: number;
   dprScale: number;
   toggle: (k: OpeningKey) => void;
@@ -46,6 +51,9 @@ export const useScene = create<SceneState>((set) => ({
   modelStatus: 'loading',
   introDone: false,
   openingsSupported: true,
+  navMode: 'ui',
+  orbitCmd: { dAz: 0, dPol: 0, zoom: 1, n: 0 },
+  orbit: (dAz, dPol, zoom = 1) => set((s) => ({ orbitCmd: { dAz, dPol, zoom, n: s.orbitCmd.n + 1 } })),
   fps: 0,
   dprScale: 1,
   toggle: (k) => set((s) => ({ openings: { ...s.openings, [k]: !s.openings[k] } })),

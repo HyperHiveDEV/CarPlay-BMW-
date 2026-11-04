@@ -2,6 +2,7 @@ package fr.f21digital.cockpit
 
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -20,6 +21,14 @@ class MainActivity : BridgeActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enterImmersive()
+        // Bouton retour (ou BACK d'une future passerelle) : transmis à l'InputManager de l'interface
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                bridge?.webView?.evaluateJavascript(
+                    "window.dispatchEvent(new CustomEvent('f21-input',{detail:{action:'back',source:'android'}}))", null,
+                )
+            }
+        })
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

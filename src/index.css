@@ -10,7 +10,8 @@
   --c-mute: 138 148 163;
   --c-accent: 168 85 247;
 }
-:root[data-accent='blue'] { --c-accent: 22 139 255; }
+:root[data-accent='blue'] { --c-accent: 28 105 212; } /* bleu BMW */
+:root { --c-cyan: 34 211 238; }
 /* Mode jour : contraste renforcé pour la lecture en plein soleil */
 :root[data-theme='day'] {
   --c-ink: 20 24 30;
@@ -39,6 +40,8 @@ input, textarea, select { user-select: text; }
   .btn-accent { @apply border-accent/60 bg-accent/15 text-fg; }
   .btn-on { @apply border-accent bg-accent/20; box-shadow: 0 0 0 1px rgb(var(--c-accent) / .25), 0 0 18px -6px rgb(var(--c-accent) / .7); }
   .input { @apply w-full rounded-xl border border-line bg-ink/60 px-3 py-2.5 text-sm text-fg outline-none focus:border-accent; }
+  .chip { @apply inline-flex items-center gap-1.5 rounded-lg border border-line/80 bg-panel/80 px-2.5 py-1.5 text-[0.75rem] text-mute backdrop-blur transition hover:text-fg disabled:opacity-35; }
+  .chip-on { @apply border-accent/70 text-fg; background: rgb(var(--c-accent) / .18); }
   .screen-enter { animation: screenIn .45s cubic-bezier(.2,.7,.2,1) both; }
 }
 @keyframes screenIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -53,3 +56,15 @@ input, textarea, select { user-select: text; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: rgb(var(--c-line)); border-radius: 3px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* ---------------------------------------------------------------- focus (molette iDrive / clavier) */
+:focus { outline: none; }
+:focus-visible, [data-nav-focus='on'] :focus {
+  outline: 2px solid rgb(var(--c-cyan) / .9);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgb(var(--c-cyan) / .14), 0 0 22px -6px rgb(var(--c-cyan) / .55);
+  filter: brightness(1.12);
+  transition: outline-color .15s, box-shadow .2s, filter .2s;
+}
+/* plus de défilement visible en mode embarqué : le contenu s'adapte */
+:root[data-density='tiny'] ::-webkit-scrollbar, :root[data-density='compact'] ::-webkit-scrollbar { width: 3px; }
