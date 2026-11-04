@@ -12,7 +12,7 @@ import { BMWF21GLB } from './BMWF21GLB';
 import type { ModelChoice } from '../settings/settingsStore';
 import { GlbCar } from './GlbCar';
 import { CAMERA_PRESETS } from './cameraPresets';
-import { DEFAULT_MANIFEST, type ModelManifest } from './modelManifest';
+import { DEFAULT_MANIFEST, missingValidation, type ModelManifest } from './modelManifest';
 import { smoothstep } from '../animations/easing';
 
 export const INTRO_DURATION = 3.6;
@@ -227,6 +227,15 @@ function useModelManifest() {
         const m = { ...DEFAULT_MANIFEST, ...custom } as ModelManifest;
         const head = await fetch(m.file, { method: 'HEAD' });
         const ok = head.ok && !(head.headers.get('content-type') ?? '').includes('text/html');
+        // verrou : le modèle définitif n'est utilisé qu'une fois les critères validés dans le manifeste
+        const missing = ok ? missingValidation(m.validation) : [];
+        if (ok && missing.length) {
+          if (!cancelled) {
+            useScene.getState().set({ modelMessage: `Modèle ${m.file} présent mais non validé (${missing.join(', ')}) — RealisticF21 affiché` });
+            setManifest(null);
+          }
+          return;
+        }
         if (!cancelled) setManifest(ok ? m : null);
       } catch {
         if (!cancelled) setManifest(null);
@@ -268,8 +277,14 @@ export function CarScene({ visible, interactive, shift, introActive, onIntroDone
   }, []);
   useEffect(() => {
     if (choice === 'legacy') useScene.getState().set({ modelStatus: 'procedural', modelMessage: 'Ancien modèle de secours (ProceduralF21)', openingsSupported: true });
-    else if (choice === 'realistic' || (choice === 'auto' && manifest === null))
-      useScene.getState().set({ modelStatus: 'procedural', modelMessage: 'Reconstitution RealisticF21 d’après les photos', openingsSupported: true });
+    else if (choice === 'realistic' || (choice === 'auto' && manifest === null)) {
+      const prev = useScene.getState().modelMessage ?? '';
+      useScene.getState().set({
+        modelStatus: 'procedural',
+        modelMessage: prev.includes('non validé') ? prev : 'Reconstitution RealisticF21 d’après les photos (en attente du modèle définitif)',
+        openingsSupported: true,
+      });
+    }
   }, [manifest, choice]);
 
   const dpr: [number, number] = tier === 'high' ? [1, 2] : tier === 'medium' ? [1, 1.5] : [0.75, 1];

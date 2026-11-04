@@ -24,6 +24,7 @@ Avec la maquette actuelle (coque de 60 sommets), les découpes sont des plans dr
 le résultat est fonctionnel mais grossier. Le script est surtout destiné à un modèle plus détaillé —
 adapter alors les constantes de la section RÉGIONS (coordonnées dans le repère du fichier source).
 """
+import math
 import sys
 import bpy
 import bmesh
@@ -100,20 +101,22 @@ def bisect(o, co, no):
 # ------------------------------------------------------------------ 1. import
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=SRC)
-# l'import glTF convertit Y-haut → Z-haut ; le fichier trimesh étant déjà Z-haut, il arrive couché :
-for o in bpy.data.objects:
-    if o.parent is None:
-        o.rotation_euler[0] -= 1.5707963
-bpy.ops.object.select_all(action="SELECT")
-bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-# ------------------------------------------------------------------ 2. latéralité (miroir Y)
-for o in bpy.data.objects:
-    if o.type == "MESH":
-        o.data.transform(__import__("mathutils").Matrix.Scale(-1, 4, (0, 1, 0)))
-        o.location.y = -o.location.y
-        o.data.flip_normals()
-        o.data.update()
+# ------------------------------------------------------------------ 2. repère + latéralité
+# L'import glTF convertit Y-haut → Z-haut ; le fichier trimesh étant déjà Z-haut, il arrive couché.
+# On « cuit » pour chaque maillage : rotation −90° autour de X, puis miroir Y (la maquette place
+# l'échappement « left » côté y < 0), directement en coordonnées monde ; transformations remises à zéro.
+from mathutils import Matrix
+FIX = Matrix.Scale(-1, 4, (0, 1, 0)) @ Matrix.Rotation(-math.pi / 2, 4, "X")
+for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+    mw = o.matrix_world.copy()
+    o.parent = None
+    o.data.transform(FIX @ mw)
+    o.matrix_world = Matrix.Identity(4)
+    o.data.flip_normals()  # le miroir inverse l'orientation des faces
+    o.data.update()
+for o in [o for o in bpy.data.objects if o.type == "EMPTY"]:
+    bpy.data.objects.remove(o, do_unlink=True)
 
 body = obj(BODY_NAME) or objects_like("body shell")[0]
 
@@ -154,7 +157,10 @@ for o in list(bpy.data.objects):
 set_origin(door_l, (DOOR_FRONT_X, 0.86, 0.6))
 set_origin(door_r, (DOOR_FRONT_X, -0.86, 0.6))
 set_origin(hood, (HOOD_REAR_X, 0.0, 1.06))
-set_origin(tailgate, (TAILGATE_FRONT_X, 0.0, 1.40))
+# charnière du hayon : bord avant / haut de l'ensemble réellement rattaché (coque + lunette + becquet)
+bpy.context.view_layer.update()
+tg_pts = [o.matrix_world @ Vector(c) for o in [tailgate, *tailgate.children_recursive] if o.type == "MESH" for c in o.bound_box]
+set_origin(tailgate, (max(p.x for p in tg_pts), 0.0, max(p.z for p in tg_pts)))
 
 # ------------------------------------------------------------------ 6. roues
 for axle in ("front", "rear"):

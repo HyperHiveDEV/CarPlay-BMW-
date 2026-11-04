@@ -51,14 +51,22 @@ def meshes():
     return [o for o in bpy.data.objects if o.type == "MESH"]
 
 
-def world_bbox(objs):
-    pts = [o.matrix_world @ Vector(c) for o in objs for c in o.bound_box]
+def world_bbox(objs, children=False):
+    """Boîte englobante monde ; children=True inclut les maillages enfants (lunette, becquet du hayon…)."""
+    allm = {o for o in objs if o.type == "MESH"}
+    if children:
+        allm |= {c for o in objs for c in o.children_recursive if c.type == "MESH"}
+    pts = [o.matrix_world @ Vector(c) for o in allm for c in o.bound_box]
     lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
     hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
     return lo, hi
 
 
 def make_empty(name, loc, parent=None):
+    # un objet du modèle portant déjà ce nom est renommé, sinon Blender suffixerait le pivot (.001)
+    clash = bpy.data.objects.get(name)
+    if clash:
+        clash.name = name + "_geo"
     e = bpy.data.objects.new(name, None)
     bpy.context.scene.collection.objects.link(e)
     e.location = loc
@@ -104,7 +112,10 @@ for o in list(bpy.data.objects):
         reparent(o, root)
 root.rotation_euler = [math.radians(a) for a in CFG.get("rotate_deg", [0, 0, 0])]
 bpy.context.view_layer.update()
-lo, hi = world_bbox(meshes())
+# longueur mesurée sur la carrosserie seule si "length_reference" est fourni (évite que l'échappement
+# ou une lame qui dépasse faussent l'échelle)
+ref = [o for o in meshes() if match(o.name, CFG.get("length_reference", []))] or meshes()
+lo, hi = world_bbox(ref)
 scale = TARGET_LENGTH / max(hi.x - lo.x, 1e-6)
 root.scale = (scale, scale, scale)
 bpy.context.view_layer.update()
@@ -124,7 +135,9 @@ for key, node in OPENING_NAMES.items():
     if not parts:
         print(f"! aucun objet pour {key} (motifs {spec['patterns']})")
         continue
-    blo, bhi = world_bbox(parts)
+    # portières/capot : géométrie propre (un rétroviseur enfant fausserait la charnière) ;
+    # hayon : ensemble rattaché (lunette, becquet) qui définit l'arête avant haute
+    blo, bhi = world_bbox(parts, children=(key == "tailgate"))
     hinge = spec.get("hinge")
     if hinge is None:  # déduction : portière = arête avant extérieure, capot = arête arrière haute, hayon = arête avant haute
         if key in ("driverDoor", "passengerDoor"):
@@ -145,7 +158,7 @@ for key, spec in CFG.get("wheels", {}).items():  # key = fl, fr, rl, rr
     if not parts:
         print(f"! roue {key} introuvable")
         continue
-    blo, bhi = world_bbox(parts)
+    blo, bhi = world_bbox(parts, children=True)
     center = (blo + bhi) / 2
     parent = make_empty(f"steer_{key}", center, root) if key.startswith("f") else root
     wheel = make_empty(f"wheel_{key}", center, parent)
@@ -186,7 +199,8 @@ for role, patterns in CFG.get("materials", {}).items():
 for light, patterns in CFG.get("lights", {}).items():
     for o in meshes():
         if match(o.name, patterns):
-            side = "l" if world_bbox([o])[0].y + world_bbox([o])[1].y > 0 else "r"
+            blo_l, bhi_l = world_bbox([o])
+            side = "l" if blo_l.y + bhi_l.y > 0 else "r"
             o.name = f"{light}_{side}" if not light.endswith(("_l", "_r", "fl", "fr", "rl", "rr")) else light
 
 # ------------------------------------------------------------------ 7. budget de triangles
@@ -217,9 +231,15 @@ manifest = {
         "headlights": ["light_head_l", "light_head_r"], "tail": ["light_tail_l", "light_tail_r"], "brake": ["light_brake_l", "light_brake_r"],
         "blinkLeft": ["blinker_fl", "blinker_rl", "blinker_mirror_l"], "blinkRight": ["blinker_fr", "blinker_rr", "blinker_mirror_r"],
     },
-    "materials": {k: k.lower() if k != "BlackGloss" else "gloss" for k in ROLE_MATERIALS},
 }
 manifest["materials"] = {"Paint": "paint", "Glass": "glass", "BlackGloss": "gloss", "Rim": "rim", "Tyre": "tyre", "Chrome": "chrome", "Trim": "trim"}
+# validation humaine OBLIGATOIRE : l'application refuse le modèle tant que tout n'est pas à true
+manifest["validation"] = {
+    "body3DoorF21": False, "lciFrontAndRearLights": False, "highQualityGeometry": False,
+    "blenderCompatibleFormat": False, "editableMaterials": False, "separableOpeningsAndWheels": False,
+    "licenceAllowsAndroidApp": False, "comparedToPhotos": False, "approved": False,
+    "approvedBy": "", "date": "", "licenceReference": "", "notes": "Compléter après validate-glb.mjs, comparaison aux photos et lecture de la licence.",
+}
 with open(os.path.join(os.path.dirname(DST), "model-manifest.json"), "w", encoding="utf-8") as f:
     json.dump(manifest, f, indent=2, ensure_ascii=False)
 print("Export OK :", DST)

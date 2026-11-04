@@ -2,19 +2,20 @@
   "_comment": "Exemple de correspondance pour prepare_f21_model.py. Les motifs sont des expressions régulières sur les noms d'objets/matériaux du modèle source : à adapter après ouverture du modèle dans Blender (Outliner). Charnières en mètres, repère Blender après mise à l'échelle (X avant, Y gauche, Z haut), ou null pour déduction automatique.",
   "target_length_m": 4.324,
   "rotate_deg": [0, 0, 0],
+  "length_reference": ["body", "carrosserie", "shell"],
   "triangle_budget": 300000,
   "delete": ["^Camera", "^Light", "ground", "shadow_plane", "license_plate_text"],
   "openings": {
-    "driverDoor": { "patterns": ["door.*(fl|_l\\b|left|_lf)", "porte.*g"], "hinge": null },
-    "passengerDoor": { "patterns": ["door.*(fr|_r\\b|right|_rf)", "porte.*d"], "hinge": null },
+    "driverDoor": { "patterns": ["door[ _.-]?(fl|lf|left|l)(?![a-z])", "porte[ _.-]?(av[ _.-]?)?g"], "hinge": null },
+    "passengerDoor": { "patterns": ["door[ _.-]?(fr|rf|right|r)(?![a-z])", "porte[ _.-]?(av[ _.-]?)?d"], "hinge": null },
     "hood": { "patterns": ["hood", "bonnet", "capot"], "hinge": null },
     "tailgate": { "patterns": ["trunk", "boot", "tailgate", "hatch", "hayon"], "hinge": null }
   },
   "wheels": {
-    "fl": { "patterns": ["wheel.*fl", "(tire|tyre|rim|disc|brake).*fl"] },
-    "fr": { "patterns": ["wheel.*fr", "(tire|tyre|rim|disc|brake).*fr"] },
-    "rl": { "patterns": ["wheel.*rl", "(tire|tyre|rim|disc|brake).*rl"] },
-    "rr": { "patterns": ["wheel.*rr", "(tire|tyre|rim|disc|brake).*rr"] }
+    "fl": { "patterns": ["wheel[ _.-]?fl(?![a-z])", "(tire|tyre|rim|disc|brake|caliper)[ _.-]?fl(?![a-z])"] },
+    "fr": { "patterns": ["wheel[ _.-]?fr(?![a-z])", "(tire|tyre|rim|disc|brake|caliper)[ _.-]?fr(?![a-z])"] },
+    "rl": { "patterns": ["wheel[ _.-]?rl(?![a-z])", "(tire|tyre|rim|disc|brake|caliper)[ _.-]?rl(?![a-z])"] },
+    "rr": { "patterns": ["wheel[ _.-]?rr(?![a-z])", "(tire|tyre|rim|disc|brake|caliper)[ _.-]?rr(?![a-z])"] }
   },
   "materials": {
     "Paint": ["paint", "carpaint", "body_color", "lack"],

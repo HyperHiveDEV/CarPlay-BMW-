@@ -16,6 +16,28 @@ Sources consultées : [forum SketchUp — revente de modèles sans autorisation]
 [analyse Gridinsoft de model-copy.info](https://gridinsoft.com/online-virus-scanner/url/model_copy-info),
 [licences Sketchfab](https://sketchfab.com/licenses).
 
+## 1 ter. Candidat prioritaire — « BMW 1 Series (F21) 3-door Urban Line 2018 » (3dmodels.org, id 129655)
+
+Prix public indiqué par le propriétaire : 175 £ (la recherche web affiche 195 $). **Aucun achat effectué.**
+La page n'a pas pu être examinée directement : même après autorisation du domaine dans le réseau de
+l'environnement, 3dmodels.org renvoie une vérification anti-robot Cloudflare (403) aux serveurs cloud.
+
+| Critère | État | Commentaire |
+|---|---|---|
+| Carrosserie F21 trois portes | probable | titre « F21 3-door » |
+| Face avant et feux arrière LCI | **à vérifier** | titre « 2018 » (LCI), mais l'adresse de la planche associée indique « urban-line-2015 » ([blueprint](https://3dmodels.org/blueprints/bmw-1-series-f21-3-door-urban-line-2015-blueprint/)) ; contrôler feux en L et double « U » sur la vue 360° |
+| Pack M Sport | **non — finition Urban Line** | boucliers avant/arrière et bas de caisse à remplacer par des pièces M Sport ; ce point est le principal écart avec la voiture |
+| Géométrie haute qualité | à vérifier | nombre de polygones et topologie sur la fiche |
+| Format compatible Blender | à vérifier | la fiche annonce plusieurs formats ([page](https://3dmodels.org/360-view/?id=129655)) |
+| Matériaux modifiables | à vérifier | |
+| Ouvrants et roues séparés | à vérifier | onglet « parts » / liste des objets |
+| Licence Android | **à confirmer par écrit** | [conditions](https://3dmodels.org/licence-terms/) : usage autorisé pour applications mobiles ; les produits « Regular Licence » ont des restrictions particulières ; l'APK embarque le fichier (extractible) |
+
+Conclusion provisoire : **candidat sérieux mais incomplet** — même s'il est LCI, il faudra des
+pare-chocs M Sport. Avant achat : obtenir du vendeur (1) la confirmation LCI, (2) la liste des pièces
+séparées, (3) le nombre de polygones et les formats, (4) la confirmation écrite que l'intégration dans
+une application Android distribuée est couverte par la licence choisie.
+
 ## 1 bis. Piste 3dmodels.org — « BMW 1 Series F21 3-door 2015 » (id 30364)
 
 Page non consultable depuis l'environnement (3dmodels.org bloqué) : **géométrie, pièces séparées,

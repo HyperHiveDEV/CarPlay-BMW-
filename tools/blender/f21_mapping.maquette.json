@@ -1,0 +1,22 @@
+{
+  "_comment": "Correspondance de TEST : GLB maquette déjà découpé par f21_split_openings.py. Sert à vérifier la chaîne complète (préparation → validation) ; ne produit pas un modèle fidèle.",
+  "target_length_m": 4.324,
+  "rotate_deg": [0, 0, 0],
+  "length_reference": ["body shell"],
+  "triangle_budget": null,
+  "delete": [],
+  "openings": {
+    "driverDoor": { "patterns": ["^door_driver$"], "hinge": null },
+    "passengerDoor": { "patterns": ["^door_passenger$"], "hinge": null },
+    "hood": { "patterns": ["^hood$"], "hinge": null },
+    "tailgate": { "patterns": ["^tailgate$"], "hinge": null }
+  },
+  "wheels": {
+    "fl": { "patterns": ["^front (tire|inner face) -1", "front-1", "roundel front-1"] },
+    "fr": { "patterns": ["^front (tire|inner face) 1", "front1", "roundel front1"] },
+    "rl": { "patterns": ["^rear (tire|inner face) -1", "rear-1", "roundel rear-1"] },
+    "rr": { "patterns": ["^rear (tire|inner face) 1", "rear1", "roundel rear1"] }
+  },
+  "materials": {},
+  "lights": {}
+}
