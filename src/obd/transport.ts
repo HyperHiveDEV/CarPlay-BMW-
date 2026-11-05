@@ -10,7 +10,8 @@ export interface BtDevice {
 /** Pont vers le plugin natif Kotlin (android/app/src/main/java/.../ObdBluetoothPlugin.kt). */
 interface ObdBluetoothNative {
   isAvailable(): Promise<{ available: boolean; enabled: boolean }>;
-  requestPermissions(): Promise<{ granted: boolean }>;
+  /** nommée ainsi côté Kotlin pour ne pas masquer Plugin.requestPermissions de Capacitor */
+  requestBluetoothPermissions(): Promise<{ granted: boolean }>;
   listDevices(opts: { discover: boolean }): Promise<{ devices: BtDevice[] }>;
   connect(opts: { address: string }): Promise<{ connected: boolean; name?: string }>;
   disconnect(): Promise<void>;
@@ -36,7 +37,7 @@ class CapacitorBluetoothTransport implements ObdTransport {
     return Native.isAvailable();
   }
   async requestPermissions() {
-    return (await Native.requestPermissions()).granted;
+    return (await Native.requestBluetoothPermissions()).granted;
   }
   async listDevices(discover: boolean) {
     return (await Native.listDevices({ discover })).devices;

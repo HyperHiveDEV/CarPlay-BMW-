@@ -6,7 +6,7 @@ export function SourceBadge({ source, className = '' }: { source: DataSource; cl
   const style =
     source === 'LIVE' ? 'border-ok/50 text-ok bg-ok/10' : source === 'DEMO' ? 'border-accent/50 text-accent bg-accent/10' : 'border-line text-mute bg-ink/40';
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-[1px] text-[10px] font-semibold tracking-[0.12em] ${style} ${className}`}>
+    <span className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-[0.35rem] py-[1px] text-[0.6rem] font-semibold tracking-[0.1em] ${style} ${className}`}>
       {source === 'LIVE' && <span className="h-1.5 w-1.5 rounded-full bg-ok" />}
       {source === 'NA' ? 'N/A' : source}
     </span>

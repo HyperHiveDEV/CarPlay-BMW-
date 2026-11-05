@@ -73,7 +73,11 @@ class AppLauncherPlugin : Plugin() {
 
     @PluginMethod
     fun openCategory(call: PluginCall) {
-        val cat = if (call.getString("category") == "maps") Intent.CATEGORY_APP_MAPS else Intent.CATEGORY_APP_MUSIC
+        val cat = when (call.getString("category")) {
+            "maps" -> Intent.CATEGORY_APP_MAPS
+            "browser" -> Intent.CATEGORY_APP_BROWSER
+            else -> Intent.CATEGORY_APP_MUSIC
+        }
         val intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, cat).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val ok = intent.resolveActivity(context.packageManager) != null
         if (ok) context.startActivity(intent)
@@ -82,7 +86,11 @@ class AppLauncherPlugin : Plugin() {
 
     @PluginMethod
     fun openSettings(call: PluginCall) {
-        val action = if (call.getString("panel") == "sound") Settings.ACTION_SOUND_SETTINGS else Settings.ACTION_BLUETOOTH_SETTINGS
+        val action = when (call.getString("panel")) {
+            "sound" -> Settings.ACTION_SOUND_SETTINGS
+            "general" -> Settings.ACTION_SETTINGS
+            else -> Settings.ACTION_BLUETOOTH_SETTINGS
+        }
         try {
             context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             call.resolve()

@@ -3,6 +3,7 @@ import { createTransport, type BtDevice, type ObdTransport } from '../obd/transp
 import { SimulatedVehicleProvider, type DemoScenario } from './SimulatedVehicleProvider';
 import type { VehicleProvider } from './types';
 import { useVehicleRepo } from './VehicleDataRepository';
+import type { AcquisitionMode } from './acquisition';
 
 /**
  * Orchestration des sources : démarre le fournisseur simulé ou OBD, surveille la connexion
@@ -14,12 +15,20 @@ class ConnectionManagerImpl {
   private active: VehicleProvider | null = null;
   private watchdog: ReturnType<typeof setInterval> | null = null;
   private repo = useVehicleRepo;
+  private obd: OBDVehicleProvider | null = null;
+  private acquisition: AcquisitionMode = 'auto';
+
+  /** Fréquence d'acquisition OBD (Réglages › Source de données). */
+  setAcquisitionMode(mode: AcquisitionMode) {
+    this.acquisition = mode;
+    this.obd?.setAcquisitionMode(mode);
+  }
 
   async startDemo(scenario?: DemoScenario) {
     await this.stopActive();
     if (scenario) this.simulator.setScenario(scenario);
     this.repo.getState().clear();
-    this.repo.getState().setConnection({ status: 'demo', message: 'Données simulées', supportedPids: [], deviceName: undefined });
+    this.repo.getState().setConnection({ status: 'demo', message: 'Données simulées', supportedPids: [], deviceName: undefined, acquisitionHz: 10, latencyMs: undefined, limitedByAdapter: false });
     this.active = this.simulator;
     await this.simulator.start((p) => this.repo.getState().ingest(p));
   }
@@ -53,7 +62,9 @@ class ConnectionManagerImpl {
     try {
       const name = await this.transport.connect(device.address);
       repo.setConnection({ status: 'initializing', deviceName: name ?? device.name, message: 'Initialisation ELM327 et détection des PID…' });
-      const obd = new OBDVehicleProvider(this.transport);
+      const obd = new OBDVehicleProvider(this.transport, this.acquisition);
+      this.obd = obd;
+      obd.onStats = (st) => this.repo.getState().setConnection(st as never);
       const info = await obd.initialize();
       obd.onFrame = () => this.repo.getState().setConnection({ lastFrameAt: Date.now() });
       obd.onError = (msg, fatal) => {
@@ -94,6 +105,7 @@ class ConnectionManagerImpl {
   private async stopActive() {
     this.stopWatchdog();
     if (this.active) await this.active.stop();
+    this.obd = null;
     if (this.active?.kind === 'obd') await this.transport.disconnect().catch(() => {});
     this.active = null;
   }
